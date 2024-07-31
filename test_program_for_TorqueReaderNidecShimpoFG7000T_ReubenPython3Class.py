@@ -6,7 +6,7 @@ reuben.brewer@gmail.com
 www.reubotics.com
 
 Apache 2 License
-Software Revision B, 06/12/2024
+Software Revision C, 07/31/2024
 
 Verified working on: Python 3.8 for Windows 10/11 64-bit and Raspberry Pi Buster (may work on Mac in non-GUI mode, but haven't tested yet).
 '''
@@ -629,7 +629,7 @@ if __name__ == '__main__':
     TorqueReaderNidecShimpoFG7000T_OPEN_FLAG = 0
 
     global TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList
-    TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList = ["067B:2303"] #["045B:0261"] for USB-B port, ["067B:2303"] for Mini-Din 8-pin port
+    TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList = ["FT79OUSHA"]
 
     global TorqueReaderNidecShimpoFG7000T_NumberOfSensors
     TorqueReaderNidecShimpoFG7000T_NumberOfSensors = len(TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList)

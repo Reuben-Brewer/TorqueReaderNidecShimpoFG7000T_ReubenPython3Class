@@ -6,7 +6,7 @@ reuben.brewer@gmail.com
 www.reubotics.com
 
 Apache 2 License
-Software Revision C, 07/18/2023
+Software Revision D, 07/31/2024
 
 Verified working on: Python 3.8 for Windows 10 64-bit, Ubuntu 20.04, and Raspberry Pi Buster (no Mac testing yet).
 '''
@@ -154,6 +154,23 @@ class LowPassFilterForDictsOfLists_ReubenPython2and3Class():
 
     ##########################################################################################################
     ##########################################################################################################
+    def LimitNumber(self, min_val, max_val, test_val):
+
+        if test_val > max_val:
+            test_val = max_val
+
+        elif test_val < min_val:
+            test_val = min_val
+
+        else:
+            test_val = test_val
+
+        return test_val
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
     def AddDictOfVariableFilterSettingsFromExternalProgram(self, NewDictOfVariableFilterSettings):
 
         self.DictOfVariableFilterSettings = dict()
@@ -163,6 +180,44 @@ class LowPassFilterForDictsOfLists_ReubenPython2and3Class():
                 self.DictOfVariableFilterSettings[VariableNameString] = deepcopy(NewDictOfVariableFilterSettings[VariableNameString])
 
         print("AddDictOfVariableFilterSettingsFromExternalProgram: " + str(self.DictOfVariableFilterSettings))
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+    def UpdateVariableFilterSettingsFromExternalProgram(self, VariableNameString, UseMedianFilterFlag, UseExponentialSmoothingFilterFlag, ExponentialSmoothingFilterLambda):
+
+        if VariableNameString in self.DictOfVariableFilterSettings:
+
+            if UseMedianFilterFlag not in [0, 1]:
+                print("UpdateVariableFilterSettingsFromExternalProgram: Error, UseMedianFilterFlag must be in [0, 1].")
+                return -1
+
+            if UseExponentialSmoothingFilterFlag not in [0, 1]:
+                print("UpdateVariableFilterSettingsFromExternalProgram: Error, UseExponentialSmoothingFilterFlag must be in [0, 1].")
+                return -1
+
+            ExponentialSmoothingFilterLambda_Limited = self.LimitNumber(0.0, 1.0, ExponentialSmoothingFilterLambda)
+
+            self.DictOfVariableFilterSettings[VariableNameString]["UseMedianFilterFlag"] = UseMedianFilterFlag
+            self.DictOfVariableFilterSettings[VariableNameString]["UseExponentialSmoothingFilterFlag"] = UseExponentialSmoothingFilterFlag
+            self.DictOfVariableFilterSettings[VariableNameString]["ExponentialSmoothingFilterLambda"] = ExponentialSmoothingFilterLambda_Limited
+
+            self.VariablesDict[VariableNameString]["UseMedianFilterFlag"] = UseMedianFilterFlag
+            self.VariablesDict[VariableNameString]["UseExponentialSmoothingFilterFlag"] = UseExponentialSmoothingFilterFlag
+            self.VariablesDict[VariableNameString]["ExponentialSmoothingFilterLambda"] = ExponentialSmoothingFilterLambda_Limited
+
+
+        else:
+            print("UpdateVariableFilterSettingsFromExternalProgram: Error, " + str(VariableNameString) + " not a recognized variable.")
+            return -1
+
+        print("UpdateVariableFilterSettingsFromExternalProgram: Update successful for " + str(VariableNameString) + \
+              " with UseMedianFilterFlag = " + str(UseMedianFilterFlag) + \
+              ", UseExponentialSmoothingFilterFlag = " + str(UseExponentialSmoothingFilterFlag) + \
+              ", and ExponentialSmoothingFilterLambda = " + str(ExponentialSmoothingFilterLambda))
+
+        return 1
     ##########################################################################################################
     ##########################################################################################################
 

@@ -6,7 +6,7 @@ reuben.brewer@gmail.com
 www.reubotics.com
 
 Apache 2 License
-Software Revision B, 06/12/2024
+Software Revision C, 07/31/2024
 
 Verified working on: Python 3.8 for Windows 10/11 64-bit and Raspberry Pi Buster (may work on Mac in non-GUI mode, but haven't tested yet).
 '''
@@ -120,7 +120,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                                                        "PeakClockwise_PCW",             #PCW Peak Clockwise mode for primary reading
                                                        "PeakCounterClockwise_PCCW"]     #PCCW Peak Counter-clockwise mode for primary reading
 
-        self.TorqueReadingUnits_AcceptableValuesList = ["N.m", "N.cm", "kgf.cm", "lbf.ft", "lbf.in"]
+        self.TorqueReadingUnits_AcceptableValuesList = ["N.m", "N.cm", "N.mm", "kgf.cm", "lbf.ft", "lbf.in"]
 
         #self.SamplesPerSecond_AcceptableValuesList = [0, 2, 5, 10, 25, 50, 125, 250] #Note: n = 1 = yields 50 times per second.
         #self.AutoShutoffTimeIntegerMinutes0to30_AcceptableValuesList = range(0, 30) #0 = disabled
@@ -1314,6 +1314,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
             ##########################################################################################################
             ConvertedValue_Nm = -11111.0
             ConvertedValue_Ncm = -11111.0
+            ConvertedValue_Nmm = -11111.0
             ConvertedValue_KGFcm = -11111.0
             ConvertedValue_LBFft = -11111.0
             ConvertedValue_LBFin = -11111.0
@@ -1326,6 +1327,9 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
             elif InputUnits == "N.cm":
                 ConvertedValue_Nm = InputValue*0.010
+
+            elif InputUnits == "N.mm":
+                ConvertedValue_Nm = InputValue*0.010 #IT'S ONLY A FIRMWARE BUG IN THE SHIMPO THAT SAYS N-MM WHEN IT'S ACTUALLY N-CM.
 
             elif InputUnits == "kgf.cm":
                 ConvertedValue_Nm = InputValue*0.0980665
@@ -1345,6 +1349,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
             if InputUnits in self.TorqueReadingUnits_AcceptableValuesList:
                 ConvertedValue_Nm = ConvertedValue_Nm/1.0
                 ConvertedValue_Ncm = ConvertedValue_Nm/0.010
+                ConvertedValue_Nmm = ConvertedValue_Nm / 0.010 #IT'S ONLY A FIRMWARE BUG IN THE SHIMPO THAT SAYS N-MM WHEN IT'S ACTUALLY N-CM.
                 ConvertedValue_KGFcm = ConvertedValue_Nm/0.0980665
                 ConvertedValue_LBFft = ConvertedValue_Nm/1.355817952
                 ConvertedValue_LBFin = ConvertedValue_Nm/0.112984429
@@ -1355,12 +1360,14 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
             if TorquePerSecondFlag == 0:
                 ConvertedValuesDict = dict([("N.m", ConvertedValue_Nm),
                                             ("N.cm", ConvertedValue_Ncm),
+                                            ("N.mm", ConvertedValue_Nmm),
                                             ("kgf.cm", ConvertedValue_KGFcm),
                                             ("lbf.ft", ConvertedValue_LBFft),
                                             ("lbf.in", ConvertedValue_LBFin)])
             else:
                 ConvertedValuesDict = dict([("N.m.PerSec", ConvertedValue_Nm),
                                             ("N.cm.PerSec", ConvertedValue_Ncm),
+                                            ("N.mm.PerSec", ConvertedValue_Nmm),
                                             ("kgf.cm.PerSec", ConvertedValue_KGFcm),
                                             ("lbf.ft.PerSec", ConvertedValue_LBFft),
                                             ("lbf.in.PerSec", ConvertedValue_LBFin)])
@@ -1375,6 +1382,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
             return dict([("N.m", ConvertedValue_Nm),
                                         ("N.cm", ConvertedValue_Ncm),
+                                        ("N.mm", ConvertedValue_Nmm),
                                         ("kgf.cm", ConvertedValue_KGFcm),
                                         ("lbf.ft", ConvertedValue_LBFft),
                                         ("lbf.in", ConvertedValue_LBFin)])

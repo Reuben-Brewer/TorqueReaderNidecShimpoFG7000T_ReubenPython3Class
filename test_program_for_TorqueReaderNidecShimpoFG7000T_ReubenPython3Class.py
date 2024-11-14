@@ -6,9 +6,9 @@ reuben.brewer@gmail.com
 www.reubotics.com
 
 Apache 2 License
-Software Revision C, 07/31/2024
+Software Revision D, 11/13/2024
 
-Verified working on: Python 3.8 for Windows 10/11 64-bit and Raspberry Pi Buster (may work on Mac in non-GUI mode, but haven't tested yet).
+Verified working on: Python 3.11 for Windows 10/11 64-bit and Raspberry Pi Buster (may work on Mac in non-GUI mode, but haven't tested yet).
 '''
 
 __author__ = 'reuben.brewer'
@@ -219,29 +219,36 @@ def ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListI
 #######################################################################################################################
 def ConvertDictToProperlyFormattedStringForPrinting(DictToPrint, NumberOfDecimalsPlaceToUse = 3, NumberOfEntriesPerLine = 1, NumberOfTabsBetweenItems = 3):
 
-    ProperlyFormattedStringForPrinting = ""
-    ItemsPerLineCounter = 0
+    try:
+        ProperlyFormattedStringForPrinting = ""
+        ItemsPerLineCounter = 0
 
-    for Key in DictToPrint:
+        for Key in DictToPrint:
 
-        if isinstance(DictToPrint[Key], dict): #RECURSION
-            ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
-                                                 Key + ":\n" + \
-                                                 ConvertDictToProperlyFormattedStringForPrinting(DictToPrint[Key], NumberOfDecimalsPlaceToUse, NumberOfEntriesPerLine, NumberOfTabsBetweenItems)
+            if isinstance(DictToPrint[Key], dict): #RECURSION
+                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
+                                                     str(Key) + ":\n" + \
+                                                     ConvertDictToProperlyFormattedStringForPrinting(DictToPrint[Key], NumberOfDecimalsPlaceToUse, NumberOfEntriesPerLine, NumberOfTabsBetweenItems)
 
-        else:
-            ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
-                                                 Key + ": " + \
-                                                 ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(DictToPrint[Key], 0, NumberOfDecimalsPlaceToUse)
+            else:
+                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
+                                                     str(Key) + ": " + \
+                                                     ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(DictToPrint[Key], 0, NumberOfDecimalsPlaceToUse)
 
-        if ItemsPerLineCounter < NumberOfEntriesPerLine - 1:
-            ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\t"*NumberOfTabsBetweenItems
-            ItemsPerLineCounter = ItemsPerLineCounter + 1
-        else:
-            ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\n"
-            ItemsPerLineCounter = 0
+            if ItemsPerLineCounter < NumberOfEntriesPerLine - 1:
+                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\t"*NumberOfTabsBetweenItems
+                ItemsPerLineCounter = ItemsPerLineCounter + 1
+            else:
+                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\n"
+                ItemsPerLineCounter = 0
 
-    return ProperlyFormattedStringForPrinting
+        return ProperlyFormattedStringForPrinting
+
+    except:
+        exceptions = sys.exc_info()[0]
+        print("ConvertDictToProperlyFormattedStringForPrinting, Exceptions: %s" % exceptions)
+        return ""
+        # traceback.print_exc()
 #######################################################################################################################
 #######################################################################################################################
 
@@ -346,7 +353,7 @@ def GUI_Thread():
         TabControlObject.add(Tab_MainControls, text='   Main Controls   ')
 
         Tab_TorqueReaderNidecShimpoFG7000T = ttk.Frame(TabControlObject)
-        TabControlObject.add(Tab_TorqueReaderNidecShimpoFG7000T, text='   FT Omega   ')
+        TabControlObject.add(Tab_TorqueReaderNidecShimpoFG7000T, text='   Torque   ')
 
         Tab_MyPrint = ttk.Frame(TabControlObject)
         TabControlObject.add(Tab_MyPrint, text='   MyPrint Terminal   ')
@@ -402,15 +409,6 @@ def GUI_Thread():
     #################################################
     #################################################
 
-    '''
-    #################################################
-    #################################################
-    ResetLatchedAlarms_Button = Button(ButtonsFrame, text="Reset Alarms", state="normal", width=20, command=lambda: ResetLatchedAlarms_Button_Response())
-    ResetLatchedAlarms_Button.grid(row=0, column=2, padx=10, pady=10, columnspan=1, rowspan=1)
-    #################################################
-    #################################################
-    '''
-
     ##########################################################################################################
 
     ################################################# THIS BLOCK MUST COME 2ND-TO-LAST IN def GUI_Thread() IF USING TABS.
@@ -448,18 +446,6 @@ def ResetTare_Button_Response():
 
 ##########################################################################################################
 ##########################################################################################################
-
-'''
-##########################################################################################################
-##########################################################################################################
-def ResetLatchedAlarms_Button_Response():
-    global ResetLatchedAlarms_EventNeedsToBeFiredFlag
-
-    ResetLatchedAlarms_EventNeedsToBeFiredFlag = 1
-
-##########################################################################################################
-##########################################################################################################
-'''
 
 ##########################################################################################################
 ##########################################################################################################
@@ -609,9 +595,6 @@ if __name__ == '__main__':
     global ResetTare_EventNeedsToBeFiredFlag
     ResetTare_EventNeedsToBeFiredFlag = 0
 
-    #global ResetLatchedAlarms_EventNeedsToBeFiredFlag
-    #ResetLatchedAlarms_EventNeedsToBeFiredFlag = 0
-
     global SumOfTorquesFromAllSensors_Nm
     SumOfTorquesFromAllSensors_Nm = 0
 
@@ -734,7 +717,8 @@ if __name__ == '__main__':
         TorqueReaderNidecShimpoFG7000T_setup_dict = dict([("GUIparametersDict", TorqueReaderNidecShimpoFG7000T_GUIparametersDict),
                                                                                     ("DesiredSerialNumber_USBtoSerialConverter", TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index]),
                                                                                     ("NameToDisplay_UserSet", "TorqueReaderNidecShimpoFG7000T: Sensor " + TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index]),
-                                                                                    ("MainThread_TimeToSleepEachLoop", 0.002),
+                                                                                    ("DedicatedTxThread_TimeToSleepEachLoop", 0.002),
+                                                                                    ("DedicatedRxThread_TimeToSleepEachLoop", 0.002),
                                                                                     ("TorqueDerivative_ExponentialSmoothingFilterLambda", 0.95)])
         #################################################
 
@@ -927,7 +911,12 @@ if __name__ == '__main__':
     #################################################
     if USE_TorqueReaderNidecShimpoFG7000T_FLAG == 1 and TorqueReaderNidecShimpoFG7000T_OPEN_FLAG != 1:
         print("Failed to open TorqueReaderNidecShimpoFG7000T_ReubenPython3Class.")
-        ExitProgram_Callback()
+        TorqueReadingUnits_AcceptableValuesList = []
+        #ExitProgram_Callback()
+    else:
+        TorqueReadingUnits_AcceptableValuesList = TorqueReaderNidecShimpoFG7000T_ListOfObjects[0].GetTorqueReadingUnitsAcceptableValuesList()
+
+    print("TorqueReadingUnits_AcceptableValuesList: " + str(TorqueReadingUnits_AcceptableValuesList))
     #################################################
     #################################################
 
@@ -935,7 +924,7 @@ if __name__ == '__main__':
     #################################################
     if USE_MyPrint_FLAG == 1 and MyPrint_OPEN_FLAG != 1:
         print("Failed to open MyPrint_ReubenPython2and3ClassObject.")
-        ExitProgram_Callback()
+        #ExitProgram_Callback()
     #################################################
     #################################################
 
@@ -943,7 +932,7 @@ if __name__ == '__main__':
     #################################################
     if USE_CSVdataLogger_FLAG == 1 and CSVdataLogger_OPEN_FLAG != 1:
         print("Failed to open CSVdataLogger_ReubenPython3Class.")
-        ExitProgram_Callback()
+        #ExitProgram_Callback()
     #################################################
     #################################################
 
@@ -951,15 +940,16 @@ if __name__ == '__main__':
     #################################################
     if USE_MyPlotterPureTkinterStandAloneProcess_FLAG == 1 and MyPlotterPureTkinterStandAloneProcess_OPEN_FLAG != 1:
         print("Failed to open MyPlotterPureTkinterClass_Object.")
-        ExitProgram_Callback()
+        #ExitProgram_Callback()
     #################################################
     #################################################
 
     #################################################
     #################################################
+    LoopCounter = 0
+    TorqueReadingUnits_AcceptableValuesList_ListCounter = 0
     print("Starting main loop 'test_program_for_TorqueReaderNidecShimpoFG7000T_ReubenPython3Class.")
     StartingTime_MainLoopThread = getPreciseSecondsTimeStampString()
-
     while(EXIT_PROGRAM_FLAG == 0 or CSVdataLogger_ReubenPython3ClassObject.IsSaving() == 1):
 
         try:
@@ -1008,16 +998,19 @@ if __name__ == '__main__':
                     ResetTare_EventNeedsToBeFiredFlag = 0
                 ##########################################################################################################
 
-                '''
                 ##########################################################################################################
-                if ResetLatchedAlarms_EventNeedsToBeFiredFlag == 1:
-    
-                    for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-                        TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].ResetLatchedAlarms()
-    
-                    ResetLatchedAlarms_EventNeedsToBeFiredFlag = 0
+                if LoopCounter == 1000:
+                    LoopCounter = 0
+
+                    #TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].SetUnits(TorqueReadingUnits_AcceptableValuesList[TorqueReadingUnits_AcceptableValuesList_ListCounter], PrintDebugFlag=1)
+
+                    TorqueReadingUnits_AcceptableValuesList_ListCounter = TorqueReadingUnits_AcceptableValuesList_ListCounter + 1
+                    if TorqueReadingUnits_AcceptableValuesList_ListCounter == len(TorqueReadingUnits_AcceptableValuesList):
+                        TorqueReadingUnits_AcceptableValuesList_ListCounter = 0
+
+                else:
+                    LoopCounter = LoopCounter + 1
                 ##########################################################################################################
-                '''
 
             ###################################################
             ###################################################

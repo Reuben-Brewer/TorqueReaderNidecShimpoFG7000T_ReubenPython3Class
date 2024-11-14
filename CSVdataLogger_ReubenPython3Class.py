@@ -6,9 +6,9 @@ reuben.brewer@gmail.com
 www.reubotics.com
 
 Apache 2 License
-Software Revision E, 05/10/2023
+Software Revision H, 11/05/2024
 
-Verified working on: Python 3.8 for Windows 8.1, 10 64-bit and Raspberry Pi Buster (may work on Mac in non-GUI mode, but haven't tested yet).
+Verified working on: Python 3.12 for Windows 11 64-bit and Raspberry Pi Buster (may work on Mac in non-GUI mode, but haven't tested yet).
 '''
 
 __author__ = 'reuben.brewer'
@@ -74,9 +74,13 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
         self.DataStreamingFrequency_CalculatedFromMainThread = -11111.0
         self.DataStreamingDeltaT_CalculatedFromMainThread = -11111.0
 
+        self.CSVfile_FilepathFull = ""
+
         self.CSVfile_SaveFlag = 0
         self.CSVfile_SaveFlag_NeedsToBeChangedFlag = 0
         self.AcceptNewDataFlag = 0
+
+        self.MostRecentDataDict = dict()
         #########################################################
         #########################################################
 
@@ -271,81 +275,18 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
 
         #########################################################
         #########################################################
-        if "CSVfile_DirectoryPath" in setup_dict:
-            self.CSVfile_DirectoryPath = str(setup_dict["CSVfile_DirectoryPath"])
-        else:
-            self.CSVfile_DirectoryPath = os.getcwd()
-
-        print("CSVdataLogger_ReubenPython3Class __init__: CSVfile_DirectoryPath: " + str(self.CSVfile_DirectoryPath))
-        #########################################################
-        #########################################################
-
-        #########################################################
-        #########################################################
-        if "FileNamePrefix" in setup_dict:
-            self.FileNamePrefix = str(setup_dict["FileNamePrefix"])
-        else:
-            self.FileNamePrefix = "CSVdataLogger_"
-
-        print("CSVdataLogger_ReubenPython3Class __init__: FileNamePrefix: " + str(self.FileNamePrefix))
-        #########################################################
-        #########################################################
-
-        #########################################################
-        #########################################################
-        if "VariableNamesForHeaderList" in setup_dict:
-            VariableNamesForHeaderList_TEMP = setup_dict["VariableNamesForHeaderList"]
-
-            self.VariableNamesForHeaderList = list()
-
-            self.VariablesHeaderStringCommaDelimited = ""
-
-            if isinstance(VariableNamesForHeaderList_TEMP, list) == 1:
-
-                for index, VariableName in enumerate(VariableNamesForHeaderList_TEMP):
-                    self.VariablesHeaderStringCommaDelimited = self.VariablesHeaderStringCommaDelimited + str(VariableName)
-                    self.VariableNamesForHeaderList.append(str(VariableName))
-
-                    ###################################################
-                    if index < len(VariableNamesForHeaderList_TEMP) - 1:
-                        self.VariablesHeaderStringCommaDelimited = self.VariablesHeaderStringCommaDelimited + ", "
-
-                    else:
-                        self.VariablesHeaderStringCommaDelimited = self.VariablesHeaderStringCommaDelimited + "\n"
-                    ###################################################
-
-            else:
-                print("CSVdataLogger_ReubenPython3Class __init__: Error, 'VariableNamesForHeaderList' must be a list.")
-                return
-
-        else:
-            print("CSVdataLogger_ReubenPython3Class __init__: Error, must input 'VariableNamesForHeaderList'")
-            return
-
-        print("CSVdataLogger_ReubenPython3Class __init__: VariableNamesForHeaderList: " + str(self.VariableNamesForHeaderList))
-        #########################################################
-        #########################################################
-
-        #########################################################
-        #########################################################
-        if "MainThread_TimeToSleepEachLoop" in setup_dict:
-            self.MainThread_TimeToSleepEachLoop = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("MainThread_TimeToSleepEachLoop", setup_dict["MainThread_TimeToSleepEachLoop"], 0.001, 100000)
-
-        else:
-            self.MainThread_TimeToSleepEachLoop = 0.005
-
-        print("CSVdataLogger_ReubenPython3Class __init__: MainThread_TimeToSleepEachLoop: " + str(self.MainThread_TimeToSleepEachLoop))
-        #########################################################
-        #########################################################
-
-        #########################################################
-        #########################################################
         if "SaveOnStartupFlag" in setup_dict:
             self.SaveOnStartupFlag = self.PassThrough0and1values_ExitProgramOtherwise("SaveOnStartupFlag", setup_dict["SaveOnStartupFlag"])
         else:
             self.SaveOnStartupFlag = 0
 
         print("CSVdataLogger_ReubenPython3Class __init__: SaveOnStartupFlag: " + str(self.SaveOnStartupFlag))
+        #########################################################
+        #########################################################
+
+        #########################################################
+        #########################################################
+        self.UpdateSetupDictParameters(setup_dict)
         #########################################################
         #########################################################
 
@@ -390,6 +331,81 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
 
     ##########################################################################################################
     ##########################################################################################################
+    def UpdateSetupDictParameters(self, setup_dict):
+
+        #########################################################
+        #########################################################
+        if "CSVfile_DirectoryPath" in setup_dict:
+            self.CSVfile_DirectoryPath = str(setup_dict["CSVfile_DirectoryPath"])
+        else:
+            self.CSVfile_DirectoryPath = os.getcwd()
+
+        print("CSVdataLogger_ReubenPython3Class __init__: CSVfile_DirectoryPath: " + str(self.CSVfile_DirectoryPath))
+        #########################################################
+        #########################################################
+
+        #########################################################
+        #########################################################
+        if "FileNamePrefix" in setup_dict:
+            self.FileNamePrefix = str(setup_dict["FileNamePrefix"])
+        else:
+            self.FileNamePrefix = "CSVdataLogger_"
+
+        print("CSVdataLogger_ReubenPython3Class __init__: FileNamePrefix: " + str(self.FileNamePrefix))
+        #########################################################
+        #########################################################
+
+        #########################################################
+        #########################################################
+        self.VariableNamesForHeaderList = list()
+        self.VariablesHeaderStringCommaDelimited = ""
+
+        if "VariableNamesForHeaderList" in setup_dict:
+            VariableNamesForHeaderList_TEMP = setup_dict["VariableNamesForHeaderList"]
+
+            if isinstance(VariableNamesForHeaderList_TEMP, list) == 1:
+
+                for index, VariableName in enumerate(VariableNamesForHeaderList_TEMP):
+                    self.VariablesHeaderStringCommaDelimited = self.VariablesHeaderStringCommaDelimited + str(VariableName)
+                    self.VariableNamesForHeaderList.append(str(VariableName))
+
+                    ###################################################
+                    if index < len(VariableNamesForHeaderList_TEMP) - 1:
+                        self.VariablesHeaderStringCommaDelimited = self.VariablesHeaderStringCommaDelimited + ", "
+
+                    else:
+                        self.VariablesHeaderStringCommaDelimited = self.VariablesHeaderStringCommaDelimited + "\n"
+                    ###################################################
+
+            else:
+                print("CSVdataLogger_ReubenPython3Class __init__: Error, 'VariableNamesForHeaderList' must be a list.")
+                return
+
+        #else:
+        #    print("CSVdataLogger_ReubenPython3Class __init__: Error, must input 'VariableNamesForHeaderList'")
+        #    return
+
+        print("CSVdataLogger_ReubenPython3Class __init__: VariableNamesForHeaderList: " + str(self.VariableNamesForHeaderList))
+        #########################################################
+        #########################################################
+
+        #########################################################
+        #########################################################
+        if "MainThread_TimeToSleepEachLoop" in setup_dict:
+            self.MainThread_TimeToSleepEachLoop = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("MainThread_TimeToSleepEachLoop", setup_dict["MainThread_TimeToSleepEachLoop"], 0.001, 100000)
+
+        else:
+            self.MainThread_TimeToSleepEachLoop = 0.005
+
+        print("CSVdataLogger_ReubenPython3Class __init__: MainThread_TimeToSleepEachLoop: " + str(self.MainThread_TimeToSleepEachLoop))
+        #########################################################
+        #########################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
     def __del__(self):
         pass
     ##########################################################################################################
@@ -397,65 +413,198 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
 
     ##########################################################################################################
     ##########################################################################################################
-    def PassThrough0and1values_ExitProgramOtherwise(self, InputNameString, InputNumber):
+    def LimitNumber_IntOutputOnly(self, min_val, max_val, test_val):
+        if test_val > max_val:
+            test_val = max_val
 
+        elif test_val < min_val:
+            test_val = min_val
+
+        else:
+            test_val = test_val
+
+        test_val = int(test_val)
+
+        return test_val
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+    def LimitNumber_FloatOutputOnly(self, min_val, max_val, test_val):
+        if test_val > max_val:
+            test_val = max_val
+
+        elif test_val < min_val:
+            test_val = min_val
+
+        else:
+            test_val = test_val
+
+        test_val = float(test_val)
+
+        return test_val
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    def PassThrough0and1values_ExitProgramOtherwise(self, InputNameString, InputNumber, ExitProgramIfFailureFlag = 0):
+
+        ##########################################################################################################
+        ##########################################################################################################
         try:
+
+            ##########################################################################################################
             InputNumber_ConvertedToFloat = float(InputNumber)
+            ##########################################################################################################
+
         except:
+
+            ##########################################################################################################
             exceptions = sys.exc_info()[0]
-            print("PassThrough0and1values_ExitProgramOtherwise Error. InputNumber must be a float value, Exceptions: %s" % exceptions)
-            input("Press any key to continue")
-            sys.exit()
+            print("PassThrough0and1values_ExitProgramOtherwise Error. InputNumber must be a numerical value, Exceptions: %s" % exceptions)
+            traceback.print_exc()
 
-        try:
-            if InputNumber_ConvertedToFloat == 0.0 or InputNumber_ConvertedToFloat == 1:
-                return InputNumber_ConvertedToFloat
-            else:
-                input("PassThrough0and1values_ExitProgramOtherwise Error. '" +
-                          InputNameString +
-                          "' must be 0 or 1 (value was " +
-                          str(InputNumber_ConvertedToFloat) +
-                          "). Press any key (and enter) to exit.")
-
+            ##########################
+            if ExitProgramIfFailureFlag == 1:
                 sys.exit()
+            else:
+                return -1
+            ##########################
+
+            ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+        try:
+
+            ##########################################################################################################
+            if InputNumber_ConvertedToFloat == 0.0 or InputNumber_ConvertedToFloat == 1.0:
+                return InputNumber_ConvertedToFloat
+
+            else:
+
+                print("PassThrough0and1values_ExitProgramOtherwise Error. '" +
+                              str(InputNameString) +
+                              "' must be 0 or 1 (value was " +
+                              str(InputNumber_ConvertedToFloat) +
+                              "). Press any key (and enter) to exit.")
+
+                ##########################
+                if ExitProgramIfFailureFlag == 1:
+                    sys.exit()
+
+                else:
+                    return -1
+                ##########################
+
+            ##########################################################################################################
+
         except:
+
+            ##########################################################################################################
             exceptions = sys.exc_info()[0]
             print("PassThrough0and1values_ExitProgramOtherwise Error, Exceptions: %s" % exceptions)
-            input("Press any key to continue")
-            sys.exit()
+            traceback.print_exc()
+
+            ##########################
+            if ExitProgramIfFailureFlag == 1:
+                sys.exit()
+            else:
+                return -1
+            ##########################
+
+            ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+
+    ##########################################################################################################
     ##########################################################################################################
     ##########################################################################################################
 
     ##########################################################################################################
     ##########################################################################################################
-    def PassThroughFloatValuesInRange_ExitProgramOtherwise(self, InputNameString, InputNumber, RangeMinValue, RangeMaxValue):
+    ##########################################################################################################
+    def PassThroughFloatValuesInRange_ExitProgramOtherwise(self, InputNameString, InputNumber, RangeMinValue, RangeMaxValue, ExitProgramIfFailureFlag = 0):
+
+        ##########################################################################################################
+        ##########################################################################################################
         try:
+            ##########################################################################################################
             InputNumber_ConvertedToFloat = float(InputNumber)
+            ##########################################################################################################
+
         except:
+            ##########################################################################################################
             exceptions = sys.exc_info()[0]
             print("PassThroughFloatValuesInRange_ExitProgramOtherwise Error. InputNumber must be a float value, Exceptions: %s" % exceptions)
-            input("Press any key to continue")
-            sys.exit()
+            traceback.print_exc()
 
-        try:
-            if InputNumber_ConvertedToFloat >= RangeMinValue and InputNumber_ConvertedToFloat <= RangeMaxValue:
-                return InputNumber_ConvertedToFloat
-            else:
-                input("PassThroughFloatValuesInRange_ExitProgramOtherwise Error. '" +
-                          InputNameString +
-                          "' must be in the range [" +
-                          str(RangeMinValue) +
-                          ", " +
-                          str(RangeMaxValue) +
-                          "] (value was " +
-                          str(InputNumber_ConvertedToFloat) + "). Press any key (and enter) to exit.")
-
+            ##########################
+            if ExitProgramIfFailureFlag == 1:
                 sys.exit()
+            else:
+                return -11111.0
+            ##########################
+
+            ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+        try:
+
+            ##########################################################################################################
+            InputNumber_ConvertedToFloat_Limited = self.LimitNumber_FloatOutputOnly(RangeMinValue, RangeMaxValue, InputNumber_ConvertedToFloat)
+
+            if InputNumber_ConvertedToFloat_Limited != InputNumber_ConvertedToFloat:
+                print("PassThroughFloatValuesInRange_ExitProgramOtherwise Error. '" +
+                      str(InputNameString) +
+                      "' must be in the range [" +
+                      str(RangeMinValue) +
+                      ", " +
+                      str(RangeMaxValue) +
+                      "] (value was " +
+                      str(InputNumber_ConvertedToFloat) + ")")
+
+                ##########################
+                if ExitProgramIfFailureFlag == 1:
+                    sys.exit()
+                else:
+                    return -11111.0
+                ##########################
+
+            else:
+                return InputNumber_ConvertedToFloat_Limited
+            ##########################################################################################################
+
         except:
+            ##########################################################################################################
             exceptions = sys.exc_info()[0]
             print("PassThroughFloatValuesInRange_ExitProgramOtherwise Error, Exceptions: %s" % exceptions)
-            input("Press any key to continue")
-            sys.exit()
+            traceback.print_exc()
+
+            ##########################
+            if ExitProgramIfFailureFlag == 1:
+                sys.exit()
+            else:
+                return -11111.0
+            ##########################
+
+            ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+
+    ##########################################################################################################
     ##########################################################################################################
     ##########################################################################################################
 
@@ -500,6 +649,14 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
     def IsSaving(self):
 
         return self.CSVfile_SaveFlag
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+    def IsAcceptingNewData(self):
+
+        return self.AcceptNewDataFlag
     ##########################################################################################################
     ##########################################################################################################
 
@@ -637,6 +794,19 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
 
     ##########################################################################################################
     ##########################################################################################################
+    def GetMostRecentDataDict(self):
+
+        if self.EXIT_PROGRAM_FLAG == 0:
+
+            return deepcopy(self.MostRecentDataDict) #deepcopy IS required as MostRecentDataDict contains lists.
+
+        else:
+            return dict()  # So that we're not returning variables during the close-down process.
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
     def AddDataToCSVfile_ExternalFunctionCall(self, ListOfDataToWrite):
 
         if self.AcceptNewDataFlag == 1:
@@ -650,7 +820,6 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
                     print("AddDataToCSVfile: ERROR,list is incorrect length.")
 
             else:
-
                 print("AddDataToCSVfile: ERROR, input must be a list.")
 
     ##########################################################################################################
@@ -716,17 +885,15 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
                 ##########################################################################################################
 
                 ##########################################################################################################
-                #else:
-
-                #    ###################################################
-                #    if self.EXIT_PROGRAM_FLAG == 0:
-                #        break
-                    ###################################################
-
-                ##########################################################################################################
-
-                ##########################################################################################################
                 self.UpdateFrequencyCalculation_MainThread()
+
+                self.MostRecentDataDict["Time"] = self.CurrentTime_CalculatedFromMainThread
+                self.MostRecentDataDict["DataStreamingFrequency_CalculatedFromMainThread"] = self.DataStreamingFrequency_CalculatedFromMainThread
+                self.MostRecentDataDict["AcceptNewDataFlag"] = self.AcceptNewDataFlag
+                self.MostRecentDataDict["SaveFlag"] = self.CSVfile_SaveFlag
+                self.MostRecentDataDict["DataQueue_qsize"] = self.DataQueue.qsize()
+                self.MostRecentDataDict["VariableNamesForHeaderList"] = self.VariableNamesForHeaderList
+                self.MostRecentDataDict["FilepathFull"] = self.CSVfile_FilepathFull
 
                 if self.MainThread_TimeToSleepEachLoop > 0.0:
                     time.sleep(self.MainThread_TimeToSleepEachLoop)
@@ -822,21 +989,21 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
 
         self.DeviceInfo_Label["text"] = self.NameToDisplay_UserSet
 
-        self.DeviceInfo_Label.grid(row=0, column=0, padx=10, pady=10, columnspan=1, rowspan=1)
+        self.DeviceInfo_Label.grid(row=0, column=0, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=1, rowspan=1)
         #################################################
         #################################################
 
         #################################################
         #################################################
         self.Data_Label = Label(self.myFrame, text="Data_Label", width=125)
-        self.Data_Label.grid(row=1, column=0, padx=5, pady=5, columnspan=1, rowspan=1)
+        self.Data_Label.grid(row=1, column=0, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=1, rowspan=1)
         #################################################
         #################################################
 
         #################################################
         #################################################
         self.CSVfile_SaveFlag_Button = Button(self.myFrame, text='Save CSV', state="normal", width=20, font=("Helvetica", 12), command=lambda i=1: self.CSVfile_SaveFlag_ButtonResponse())
-        self.CSVfile_SaveFlag_Button.grid(row=2, column=0, padx=5, pady=5, columnspan=1, rowspan=1)
+        self.CSVfile_SaveFlag_Button.grid(row=2, column=0, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=1, rowspan=1)
         #################################################
         #################################################
 
@@ -844,7 +1011,7 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
         #################################################
         self.PrintToGui_Label = Label(self.myFrame, text="PrintToGui_Label", width=125)
         if self.EnableInternal_MyPrint_Flag == 1:
-            self.PrintToGui_Label.grid(row=3, column=0, padx=10, pady=10, columnspan=10, rowspan=10)
+            self.PrintToGui_Label.grid(row=3, column=0, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=10, rowspan=10)
         #################################################
         #################################################
 
@@ -896,11 +1063,10 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
                     try:
 
                         #######################################################
-                        self.Data_Label["text"] = "Time: " + self.ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(self.CurrentTime_CalculatedFromMainThread, 0, 3) + \
-                                                "\nCallback Frequency: " + self.ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(self.DataStreamingFrequency_CalculatedFromMainThread, 0, 3) + \
-                                                "\nAcceptNewDataFlag: " + str(self.AcceptNewDataFlag) + \
-                                                "\t\tCSVfile_SaveFlag: " + str(self.CSVfile_SaveFlag) + \
-                                                "\t\tDataQueue.qsize(): " + str(self.DataQueue.qsize())
+                        self.Data_Label["text"] = self.ConvertDictToProperlyFormattedStringForPrinting(self.MostRecentDataDict,
+                                                                                                    NumberOfDecimalsPlaceToUse = 5,
+                                                                                                    NumberOfEntriesPerLine = 1,
+                                                                                                    NumberOfTabsBetweenItems = 3)
                         #######################################################
 
                         #######################################################
@@ -1134,4 +1300,39 @@ class CSVdataLogger_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
     ##########################################################################################################
     ##########################################################################################################
     ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+    def ConvertDictToProperlyFormattedStringForPrinting(self, DictToPrint, NumberOfDecimalsPlaceToUse = 3, NumberOfEntriesPerLine = 1, NumberOfTabsBetweenItems = 3):
+
+        ProperlyFormattedStringForPrinting = ""
+        ItemsPerLineCounter = 0
+
+        for Key in DictToPrint:
+
+            ##########################################################################################################
+            if isinstance(DictToPrint[Key], dict): #RECURSION
+                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
+                                                     Key + ":\n" + \
+                                                     self.ConvertDictToProperlyFormattedStringForPrinting(DictToPrint[Key], NumberOfDecimalsPlaceToUse, NumberOfEntriesPerLine, NumberOfTabsBetweenItems)
+
+            else:
+                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
+                                                     Key + ": " + \
+                                                     self.ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(DictToPrint[Key], 0, NumberOfDecimalsPlaceToUse)
+            ##########################################################################################################
+
+            ##########################################################################################################
+            if ItemsPerLineCounter < NumberOfEntriesPerLine - 1:
+                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\t"*NumberOfTabsBetweenItems
+                ItemsPerLineCounter = ItemsPerLineCounter + 1
+            else:
+                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\n"
+                ItemsPerLineCounter = 0
+            ##########################################################################################################
+
+        return ProperlyFormattedStringForPrinting
+    ##########################################################################################################
+    ##########################################################################################################
+
 

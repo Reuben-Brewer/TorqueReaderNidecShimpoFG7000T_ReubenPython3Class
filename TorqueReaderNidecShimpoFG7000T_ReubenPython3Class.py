@@ -6,9 +6,9 @@ reuben.brewer@gmail.com
 www.reubotics.com
 
 Apache 2 License
-Software Revision C, 07/31/2024
+Software Revision D, 11/13/2024
 
-Verified working on: Python 3.8 for Windows 10/11 64-bit and Raspberry Pi Buster (may work on Mac in non-GUI mode, but haven't tested yet).
+Verified working on: Python 3.11 for Windows 10/11 64-bit and Raspberry Pi Buster (may work on Mac in non-GUI mode, but haven't tested yet).
 '''
 
 __author__ = 'reuben.brewer'
@@ -91,7 +91,8 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
         self.EXIT_PROGRAM_FLAG = 0
         self.OBJECT_CREATED_SUCCESSFULLY_FLAG = 0
         self.EnableInternal_MyPrint_Flag = 0
-        self.MainThread_still_running_flag = 0
+        self.DedicatedTxThread_StillRunningFlag = 0
+        self.DedicatedRxThread_StillRunningFlag = 0
         #########################################################
         #########################################################
         
@@ -104,32 +105,22 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
         self.SerialParity = serial.PARITY_NONE
         self.SerialStopBits = serial.STOPBITS_ONE
         self.SerialByteSize = serial.EIGHTBITS
-        self.SerialRxBufferSize = 100
-        self.SerialTxBufferSize = 100
+        self.SerialRxBufferSize = 100 #Haven't set this based on anything, need to measure
+        self.SerialTxBufferSize = 100 #Haven't set this based on anything, need to measure
         self.SerialPortNameCorrespondingToCorrectSerialNumber = "default"
-        self.MainThread_TxMessageToSend_Queue = Queue.Queue()
+        self.DedicatedTxThread_TxMessageStringToSend_Queue = Queue.Queue()
+        self.DedicatedTxThread_TxMessageBytearrayToSend_Queue = Queue.Queue()
         self.SerialStrToTx_LAST_SENT = ""
         #########################################################
         #########################################################
         
         #########################################################
         #########################################################
-        self.ReadingModeString_AcceptableValuesList = ["RealTime_CUR",                  #CUR Current mode (real time mode) for primary reading
-                                                       "PeakTension_PT",                #PT Peak Tension mode for primary reading
-                                                       "PeakCompression_PC",            #PC Peak Compression mode for primary reading
-                                                       "PeakClockwise_PCW",             #PCW Peak Clockwise mode for primary reading
-                                                       "PeakCounterClockwise_PCCW"]     #PCCW Peak Counter-clockwise mode for primary reading
+        self.TorqueReadingUnits_AcceptableValuesList = ["N.m", "N.cm", "kgf.cm", "lbf.ft", "lbf.in"]  #On 11/13/24, it appeared that "kgf.m" and "N.mm" are not commandable even though they appear in the data-sheet.
 
-        self.TorqueReadingUnits_AcceptableValuesList = ["N.m", "N.cm", "N.mm", "kgf.cm", "lbf.ft", "lbf.in"]
+        self.TorqueReadingUnits_DefaultUnits = "N.m"
 
-        #self.SamplesPerSecond_AcceptableValuesList = [0, 2, 5, 10, 25, 50, 125, 250] #Note: n = 1 = yields 50 times per second.
-        #self.AutoShutoffTimeIntegerMinutes0to30_AcceptableValuesList = range(0, 30) #0 = disabled
-        #self.FilterExponent0to10ForNumberOfSamplesToBeAveraged_AcceptableValuesList = range(0, 10) #0 = disabled
-
-        #self.ReadingModeString_NeedsToBeChangedFlag = 0
-        #self.SamplesPerSecond_NeedsToBeChangedFlag = 0
-        #self.AutoShutoffTimeIntegerMinutes0to30_NeedsToBeChangedFlag = 0
-        #self.FilterExponent0to10ForNumberOfSamplesToBeAveraged_NeedsToBeChangedFlag = 0
+        self.SamplesPerSecond_AcceptableValuesList = [10, 20, 50, 100]
 
         self.TimeBetweenSendingSettingCommands = 0.010
         #########################################################
@@ -137,12 +128,17 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
         
         #########################################################
         #########################################################
-        self.CurrentTime_CalculatedFromMainThread = -11111.0
-        self.LastTime_CalculatedFromMainThread = -11111.0
-        self.StartingTime_CalculatedFromMainThread = -11111.0
-        self.DataStreamingFrequency_CalculatedFromMainThread = -11111.0
-        self.DataStreamingFrequency_CalculatedFromMainThread_2 = -11111.0
-        self.DataStreamingDeltaT_CalculatedFromMainThread = -11111.0
+        self.CurrentTime_CalculatedFromDedicatedTxThread = -11111.0
+        self.LastTime_CalculatedFromDedicatedTxThread = -11111.0
+        self.StartingTime_CalculatedFromDedicatedTxThread = -11111.0
+        self.DataStreamingFrequency_CalculatedFromDedicatedTxThread = -11111.0
+        self.DataStreamingDeltaT_CalculatedFromDedicatedTxThread = -11111.0
+
+        self.CurrentTime_CalculatedFromDedicatedRxThread = -11111.0
+        self.LastTime_CalculatedFromDedicatedRxThread = -11111.0
+        self.StartingTime_CalculatedFromDedicatedRxThread = -11111.0
+        self.DataStreamingFrequency_CalculatedFromDedicatedRxThread = -11111.0
+        self.DataStreamingDeltaT_CalculatedFromDedicatedRxThread = -11111.0
 
         self.CurrentTime_CalculateMeasurementTorqueDerivative = -11111.0
         self.LastTime_CalculateMeasurementTorqueDerivative = -11111.0
@@ -161,15 +157,11 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
         self.ResetTare_EventNeedsToBeFiredFlag = 0
         self.ResetTare_EventHasHappenedFlag = 0
 
-        '''
-        self.ResetLatchedAlarms_EventNeedsToBeFiredFlag = 0
-        self.ResetLatchedAlarms_EventHasHappenedFlag = 0
-        '''
+        self.DataStream_State = 1
+        self.ToggleDataStreamOnOrOff_EventNeedsToBeFiredFlag = 0
 
-        #self.ListCurrentSettingsAndStatus_EventNeedsToBeFiredFlag = 0
-
-        #self.DataStream_State = 1
-        #self.ToggleDataStreamOnOrOff_EventNeedsToBeFiredFlag = 0
+        self.ToggleUnits_EventNeedsToBeFiredFlag = 0
+        self.ToggleUnits_EventCounter = 0
 
         self.MostRecentDataDict = dict()
         #########################################################
@@ -387,7 +379,8 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #new_filtered_value = k * raw_sensor_value + (1 - k) * old_filtered_value
-        self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject_DictOfVariableFilterSettings = dict([("DataStreamingFrequency_CalculatedFromMainThread", dict([("UseMedianFilterFlag", 1), ("UseExponentialSmoothingFilterFlag", 1),("ExponentialSmoothingFilterLambda", 0.05)])),
+        self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject_DictOfVariableFilterSettings = dict([("DataStreamingFrequency_CalculatedFromDedicatedTxThread", dict([("UseMedianFilterFlag", 1), ("UseExponentialSmoothingFilterFlag", 1), ("ExponentialSmoothingFilterLambda", 0.05)])),
+                                                                                                            ("DataStreamingFrequency_CalculatedFromDedicatedRxThread", dict([("UseMedianFilterFlag", 1), ("UseExponentialSmoothingFilterFlag", 1), ("ExponentialSmoothingFilterLambda", 0.05)])),
                                                                                                              ("TorqueDerivative", dict([("UseMedianFilterFlag", 1), ("UseExponentialSmoothingFilterFlag", 1),("ExponentialSmoothingFilterLambda", self.TorqueDerivative_ExponentialSmoothingFilterLambda)]))])
 
         self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject_setup_dict = dict([("DictOfVariableFilterSettings", self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject_DictOfVariableFilterSettings)])
@@ -441,29 +434,15 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #########################################################
-        '''
-        self.SetAutoShutoffTimeIntegerMinutes0to30(ShutoffTimeIntegerMinutes=self.AutoShutoffTimeIntegerMinutes0to30)
-        time.sleep(self.TimeBetweenSendingSettingCommands)
-
-        self.SetReadingMode(self.ReadingModeString)
-        time.sleep(self.TimeBetweenSendingSettingCommands)
-
-        self.SetDataOutputStreamNoUnitsOrUnits0or1(UnitsOrUnits0or1=1)
-        time.sleep(self.TimeBetweenSendingSettingCommands)
-
-        self.SetSamplesPerSecond(self.SamplesPerSecond)
-        time.sleep(self.TimeBetweenSendingSettingCommands)
-
-        self.SaveCurrentSettingsToMemory()
-        time.sleep(self.TimeBetweenSendingSettingCommands)
-        '''
+        self.DedicatedRxThread_ThreadingObject = threading.Thread(target=self.DedicatedRxThread, args=())
+        self.DedicatedRxThread_ThreadingObject.start()
         #########################################################
         #########################################################
 
         #########################################################
         #########################################################
-        self.MainThread_ThreadingObject = threading.Thread(target=self.MainThread, args=())
-        self.MainThread_ThreadingObject.start()
+        self.DedicatedTxThread_ThreadingObject = threading.Thread(target=self.DedicatedTxThread, args=())
+        self.DedicatedTxThread_ThreadingObject.start()
         #########################################################
         #########################################################
 
@@ -500,46 +479,6 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
     ##########################################################################################################
     def UpdateSetupDictParameters(self, setup_dict):
 
-        '''
-        #########################################################
-        #########################################################
-        if "ReadingModeString" in setup_dict:
-            self.ReadingModeString = str(setup_dict["ReadingModeString"])
-
-            if self.ReadingModeString not in self.ReadingModeString_AcceptableValuesList:
-                self.ReadingModeString = "RealTime_CUR"
-                print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: ERROR, ReadingModeString must be in " + str(self.ReadingModeString_AcceptableValuesList))
-
-        else:
-            self.ReadingModeString = "RealTime_CUR"
-
-        print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: ReadingModeString: " + str(self.ReadingModeString))
-
-        self.ReadingModeString_NeedsToBeChangedFlag = 1
-        #########################################################
-        #########################################################
-
-        #########################################################
-        #########################################################
-        if "AutoShutoffTimeIntegerMinutes0to30" in setup_dict:
-            AutoShutoffTimeIntegerMinutes0to30_TEMP = int(self.PassThroughFloatValuesInRange_ExitProgramOtherwise("AutoShutoffTimeIntegerMinutes0to30", setup_dict["AutoShutoffTimeIntegerMinutes0to30"], 0.0, 30.0))
-
-            if AutoShutoffTimeIntegerMinutes0to30_TEMP not in self.AutoShutoffTimeIntegerMinutes0to30_AcceptableValuesList:
-                self.AutoShutoffTimeIntegerMinutes0to30 = 0  #disabled
-                print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: Error, AutoShutoffTimeIntegerMinutes0to30 must be in " + str(self.AutoShutoffTimeIntegerMinutes0to30_AcceptableValuesList))
-
-            else:
-                self.AutoShutoffTimeIntegerMinutes0to30 = AutoShutoffTimeIntegerMinutes0to30_TEMP
-
-        else:
-            self.AutoShutoffTimeIntegerMinutes0to30 = 0 #disabled
-
-        print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: AutoShutoffTimeIntegerMinutes0to30: " + str(self.AutoShutoffTimeIntegerMinutes0to30))
-
-        self.AutoShutoffTimeIntegerMinutes0to30_NeedsToBeChangedFlag = 1
-        #########################################################
-        #########################################################
-
         #########################################################
         #########################################################
         if "SamplesPerSecond" in setup_dict:
@@ -553,7 +492,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                 self.SamplesPerSecond = SamplesPerSecond_TEMP
 
         else:
-            self.SamplesPerSecond = 250 #fastest
+            self.SamplesPerSecond = 100
 
         print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: SamplesPerSecond: " + str(self.SamplesPerSecond))
 
@@ -563,35 +502,25 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #########################################################
-        if "FilterExponent0to10ForNumberOfSamplesToBeAveraged" in setup_dict:
-            FilterExponent0to10ForNumberOfSamplesToBeAveraged_TEMP = int(self.PassThroughFloatValuesInRange_ExitProgramOtherwise("FilterExponent0to10ForNumberOfSamplesToBeAveraged", setup_dict["FilterExponent0to10ForNumberOfSamplesToBeAveraged"], 0.0, 10.0))
-
-            if FilterExponent0to10ForNumberOfSamplesToBeAveraged_TEMP not in self.FilterExponent0to10ForNumberOfSamplesToBeAveraged_AcceptableValuesList:
-                self.FilterExponent0to10ForNumberOfSamplesToBeAveraged = 0  #disabled
-                print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: Error, FilterExponent0to10ForNumberOfSamplesToBeAveraged must be in " + str(self.FilterExponent0to10ForNumberOfSamplesToBeAveraged_AcceptableValuesList))
-
-            else:
-                self.FilterExponent0to10ForNumberOfSamplesToBeAveraged = FilterExponent0to10ForNumberOfSamplesToBeAveraged_TEMP
+        if "DedicatedTxThread_TimeToSleepEachLoop" in setup_dict:
+            self.DedicatedTxThread_TimeToSleepEachLoop = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("DedicatedTxThread_TimeToSleepEachLoop", setup_dict["DedicatedTxThread_TimeToSleepEachLoop"], 0.001, 100000)
 
         else:
-            self.FilterExponent0to10ForNumberOfSamplesToBeAveraged = 0 #disabled
+            self.DedicatedTxThread_TimeToSleepEachLoop = 0.005
 
-        print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: FilterExponent0to10ForNumberOfSamplesToBeAveraged: " + str(self.FilterExponent0to10ForNumberOfSamplesToBeAveraged))
-
-        self.FilterExponent0to10ForNumberOfSamplesToBeAveraged_NeedsToBeChangedFlag = 1
+        print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: DedicatedTxThread_TimeToSleepEachLoop: " + str(self.DedicatedTxThread_TimeToSleepEachLoop))
         #########################################################
         #########################################################
-        '''
 
         #########################################################
         #########################################################
-        if "MainThread_TimeToSleepEachLoop" in setup_dict:
-            self.MainThread_TimeToSleepEachLoop = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("MainThread_TimeToSleepEachLoop", setup_dict["MainThread_TimeToSleepEachLoop"], 0.001, 100000)
+        if "DedicatedRxThread_TimeToSleepEachLoop" in setup_dict:
+            self.DedicatedRxThread_TimeToSleepEachLoop = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("DedicatedRxThread_TimeToSleepEachLoop", setup_dict["DedicatedRxThread_TimeToSleepEachLoop"], 0.001, 100000)
 
         else:
-            self.MainThread_TimeToSleepEachLoop = 0.005
+            self.DedicatedRxThread_TimeToSleepEachLoop = 0.005
 
-        print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: MainThread_TimeToSleepEachLoop: " + str(self.MainThread_TimeToSleepEachLoop))
+        print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: DedicatedRxThread_TimeToSleepEachLoop: " + str(self.DedicatedRxThread_TimeToSleepEachLoop))
         #########################################################
         #########################################################
 
@@ -770,65 +699,160 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
     ##########################################################################################################
     ##########################################################################################################
-    def PassThrough0and1values_ExitProgramOtherwise(self, InputNameString, InputNumber):
+    ##########################################################################################################
+    def PassThrough0and1values_ExitProgramOtherwise(self, InputNameString, InputNumber, ExitProgramIfFailureFlag = 0):
 
+        ##########################################################################################################
+        ##########################################################################################################
         try:
+
+            ##########################################################################################################
             InputNumber_ConvertedToFloat = float(InputNumber)
+            ##########################################################################################################
+
         except:
+
+            ##########################################################################################################
             exceptions = sys.exc_info()[0]
-            print("PassThrough0and1values_ExitProgramOtherwise Error. InputNumber must be a float value, Exceptions: %s" % exceptions)
-            input("Press any key to continue")
-            sys.exit()
+            print(self.TellWhichFileWereIn() + ", PassThrough0and1values_ExitProgramOtherwise Error. InputNumber '" + InputNameString + "' must be a numerical value, Exceptions: %s" % exceptions)
 
-        try:
-            if InputNumber_ConvertedToFloat == 0.0 or InputNumber_ConvertedToFloat == 1:
-                return InputNumber_ConvertedToFloat
-            else:
-                input("PassThrough0and1values_ExitProgramOtherwise Error. '" +
-                          InputNameString +
-                          "' must be 0 or 1 (value was " +
-                          str(InputNumber_ConvertedToFloat) +
-                          "). Press any key (and enter) to exit.")
-
+            ##########################
+            if ExitProgramIfFailureFlag == 1:
                 sys.exit()
+            else:
+                return -1
+            ##########################
+
+            ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+        try:
+
+            ##########################################################################################################
+            if InputNumber_ConvertedToFloat == 0.0 or InputNumber_ConvertedToFloat == 1.0:
+                return InputNumber_ConvertedToFloat
+
+            else:
+
+                print(self.TellWhichFileWereIn() + ", PassThrough0and1values_ExitProgramOtherwise Error. '" +
+                              str(InputNameString) +
+                              "' must be 0 or 1 (value was " +
+                              str(InputNumber_ConvertedToFloat) +
+                              "). Press any key (and enter) to exit.")
+
+                ##########################
+                if ExitProgramIfFailureFlag == 1:
+                    sys.exit()
+
+                else:
+                    return -1
+                ##########################
+
+            ##########################################################################################################
+
         except:
+
+            ##########################################################################################################
             exceptions = sys.exc_info()[0]
-            print("PassThrough0and1values_ExitProgramOtherwise Error, Exceptions: %s" % exceptions)
-            input("Press any key to continue")
-            sys.exit()
+            print(self.TellWhichFileWereIn() + ", PassThrough0and1values_ExitProgramOtherwise Error, Exceptions: %s" % exceptions)
+
+            ##########################
+            if ExitProgramIfFailureFlag == 1:
+                sys.exit()
+            else:
+                return -1
+            ##########################
+
+            ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+
+    ##########################################################################################################
     ##########################################################################################################
     ##########################################################################################################
 
     ##########################################################################################################
     ##########################################################################################################
-    def PassThroughFloatValuesInRange_ExitProgramOtherwise(self, InputNameString, InputNumber, RangeMinValue, RangeMaxValue):
+    ##########################################################################################################
+    def PassThroughFloatValuesInRange_ExitProgramOtherwise(self, InputNameString, InputNumber, RangeMinValue, RangeMaxValue, ExitProgramIfFailureFlag = 0):
+
+        ##########################################################################################################
+        ##########################################################################################################
         try:
+            ##########################################################################################################
             InputNumber_ConvertedToFloat = float(InputNumber)
+            ##########################################################################################################
+
         except:
+            ##########################################################################################################
             exceptions = sys.exc_info()[0]
-            print("PassThroughFloatValuesInRange_ExitProgramOtherwise Error. InputNumber must be a float value, Exceptions: %s" % exceptions)
-            input("Press any key to continue")
-            sys.exit()
+            print(self.TellWhichFileWereIn() + ", PassThroughFloatValuesInRange_ExitProgramOtherwise Error. InputNumber '" + InputNameString + "' must be a float value, Exceptions: %s" % exceptions)
+            traceback.print_exc()
 
-        try:
-            if InputNumber_ConvertedToFloat >= RangeMinValue and InputNumber_ConvertedToFloat <= RangeMaxValue:
-                return InputNumber_ConvertedToFloat
-            else:
-                input("PassThroughFloatValuesInRange_ExitProgramOtherwise Error. '" +
-                          InputNameString +
-                          "' must be in the range [" +
-                          str(RangeMinValue) +
-                          ", " +
-                          str(RangeMaxValue) +
-                          "] (value was " +
-                          str(InputNumber_ConvertedToFloat) + "). Press any key (and enter) to exit.")
-
+            ##########################
+            if ExitProgramIfFailureFlag == 1:
                 sys.exit()
+            else:
+                return -11111.0
+            ##########################
+
+            ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+        try:
+
+            ##########################################################################################################
+            InputNumber_ConvertedToFloat_Limited = self.LimitNumber_FloatOutputOnly(RangeMinValue, RangeMaxValue, InputNumber_ConvertedToFloat)
+
+            if InputNumber_ConvertedToFloat_Limited != InputNumber_ConvertedToFloat:
+                print(self.TellWhichFileWereIn() + ", PassThroughFloatValuesInRange_ExitProgramOtherwise Error. '" +
+                      str(InputNameString) +
+                      "' must be in the range [" +
+                      str(RangeMinValue) +
+                      ", " +
+                      str(RangeMaxValue) +
+                      "] (value was " +
+                      str(InputNumber_ConvertedToFloat) + ")")
+
+                ##########################
+                if ExitProgramIfFailureFlag == 1:
+                    sys.exit()
+                else:
+                    return -11111.0
+                ##########################
+
+            else:
+                return InputNumber_ConvertedToFloat_Limited
+            ##########################################################################################################
+
         except:
+            ##########################################################################################################
             exceptions = sys.exc_info()[0]
-            print("PassThroughFloatValuesInRange_ExitProgramOtherwise Error, Exceptions: %s" % exceptions)
-            input("Press any key to continue")
-            sys.exit()
+            print(self.TellWhichFileWereIn() + ", PassThroughFloatValuesInRange_ExitProgramOtherwise Error, Exceptions: %s" % exceptions)
+            traceback.print_exc()
+
+            ##########################
+            if ExitProgramIfFailureFlag == 1:
+                sys.exit()
+            else:
+                return -11111.0
+            ##########################
+
+            ##########################################################################################################
+
+        ##########################################################################################################
+        ##########################################################################################################
+
+    ##########################################################################################################
     ##########################################################################################################
     ##########################################################################################################
 
@@ -859,6 +883,15 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
     ##########################################################################################################
     ##########################################################################################################
+    def GetTorqueReadingUnitsAcceptableValuesList(self):
+
+        return list(self.TorqueReadingUnits_AcceptableValuesList)
+
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
     def GetMostRecentDataDict(self):
 
         if self.EXIT_PROGRAM_FLAG == 0:
@@ -872,21 +905,42 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
     ##########################################################################################################
     ##########################################################################################################
-    def UpdateFrequencyCalculation_MainThread_Filtered(self):
+    def UpdateFrequencyCalculation_DedicatedTxThread_Filtered(self):
 
         try:
-            self.DataStreamingDeltaT_CalculatedFromMainThread = self.CurrentTime_CalculatedFromMainThread - self.LastTime_CalculatedFromMainThread
+            self.DataStreamingDeltaT_CalculatedFromDedicatedTxThread = self.CurrentTime_CalculatedFromDedicatedTxThread - self.LastTime_CalculatedFromDedicatedTxThread
 
-            if self.DataStreamingDeltaT_CalculatedFromMainThread != 0.0:
-                DataStreamingFrequency_CalculatedFromMainThread_TEMP = 1.0/self.DataStreamingDeltaT_CalculatedFromMainThread
+            if self.DataStreamingDeltaT_CalculatedFromDedicatedTxThread != 0.0:
+                DataStreamingFrequency_CalculatedFromDedicatedTxThread_TEMP = 1.0/self.DataStreamingDeltaT_CalculatedFromDedicatedTxThread
 
-                ResultsDict = self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject.AddDataDictFromExternalProgram(dict([("DataStreamingFrequency_CalculatedFromMainThread", DataStreamingFrequency_CalculatedFromMainThread_TEMP)]))
-                self.DataStreamingFrequency_CalculatedFromMainThread = ResultsDict["DataStreamingFrequency_CalculatedFromMainThread"]["Filtered_MostRecentValuesList"][0]
+                ResultsDict = self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject.AddDataDictFromExternalProgram(dict([("DataStreamingFrequency_CalculatedFromDedicatedTxThread", DataStreamingFrequency_CalculatedFromDedicatedTxThread_TEMP)]))
+                self.DataStreamingFrequency_CalculatedFromDedicatedTxThread = ResultsDict["DataStreamingFrequency_CalculatedFromDedicatedTxThread"]["Filtered_MostRecentValuesList"][0]
 
-            self.LastTime_CalculatedFromMainThread = self.CurrentTime_CalculatedFromMainThread
+            self.LastTime_CalculatedFromDedicatedTxThread = self.CurrentTime_CalculatedFromDedicatedTxThread
         except:
             exceptions = sys.exc_info()[0]
-            print("UpdateFrequencyCalculation_MainThread_Filtered, Exceptions: %s" % exceptions)
+            print("UpdateFrequencyCalculation_DedicatedTxThread_Filtered, Exceptions: %s" % exceptions)
+            traceback.print_exc()
+    ##########################################################################################################
+    ##########################################################################################################
+    
+    ##########################################################################################################
+    ##########################################################################################################
+    def UpdateFrequencyCalculation_DedicatedRxThread_Filtered(self):
+
+        try:
+            self.DataStreamingDeltaT_CalculatedFromDedicatedRxThread = self.CurrentTime_CalculatedFromDedicatedRxThread - self.LastTime_CalculatedFromDedicatedRxThread
+
+            if self.DataStreamingDeltaT_CalculatedFromDedicatedRxThread != 0.0:
+                DataStreamingFrequency_CalculatedFromDedicatedRxThread_TEMP = 1.0/self.DataStreamingDeltaT_CalculatedFromDedicatedRxThread
+
+                ResultsDict = self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject.AddDataDictFromExternalProgram(dict([("DataStreamingFrequency_CalculatedFromDedicatedRxThread", DataStreamingFrequency_CalculatedFromDedicatedRxThread_TEMP)]))
+                self.DataStreamingFrequency_CalculatedFromDedicatedRxThread = ResultsDict["DataStreamingFrequency_CalculatedFromDedicatedRxThread"]["Filtered_MostRecentValuesList"][0]
+
+            self.LastTime_CalculatedFromDedicatedRxThread = self.CurrentTime_CalculatedFromDedicatedRxThread
+        except:
+            exceptions = sys.exc_info()[0]
+            print("UpdateFrequencyCalculation_DedicatedRxThread_Filtered, Exceptions: %s" % exceptions)
             traceback.print_exc()
     ##########################################################################################################
     ##########################################################################################################
@@ -945,18 +999,51 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
     ##########################################################################################################
     ##########################################################################################################
-    def SendSerialStrToTx(self, SerialStrToTx):
+    def SendSerialBytearrrayToTx(self, BytearrayToTx, PrintDebugFlag=0):
 
         if self.SerialConnectedFlag == 1:
 
             try:
 
-                #if SerialStrToTx[-1] != "\r":
-                #    SerialStrToTx = SerialStrToTx + "\r"
+                self.SerialObject.write(BytearrayToTx)
+
+                if PrintDebugFlag == 1:
+                    print("SendSerialBytearrrayToTx: ")
+                    for ByteToSend in BytearrayToTx:
+                        print(str(BytearrayToTx) + ", ")
+                    print("\n")
+
+                self.SerialStrToTx_LAST_SENT = str(BytearrayToTx)
+
+                self.MostRecentDataDict["SerialStrToTx_LAST_SENT"] = self.SerialStrToTx_LAST_SENT
+
+            except:
+                exceptions = sys.exc_info()[0]
+                print("SendSerialStrToTx, exceptions: %s" % exceptions)
+
+        else:
+            print("SendSerialStrToTx: Error, SerialConnectedFlag = 0, cannot issue command.")
+            return 0
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+    def SendSerialStrToTx(self, SerialStrToTx, PrintDebugFlag=0):
+
+        if self.SerialConnectedFlag == 1:
+
+            try:
 
                 SerialStrToTx = SerialStrToTx
 
                 self.SerialObject.write(SerialStrToTx.encode('utf-8'))
+
+                if PrintDebugFlag == 1:
+
+                    print("SendSerialStrToTx: " + str(SerialStrToTx.encode('utf-8')))
+                    for ByteToPrint in SerialStrToTx.encode('utf-8'):
+                        print(", " + str(ByteToPrint))
 
                 self.SerialStrToTx_LAST_SENT = SerialStrToTx
 
@@ -972,161 +1059,164 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
     ##########################################################################################################
     ##########################################################################################################
 
-    '''
-    ##########################################################################################################
-    ##########################################################################################################
-    def SetAutoShutoffTimeIntegerMinutes0to30(self, ShutoffTimeIntegerMinutes = 30):
-
-        if self.SerialConnectedFlag == 1:
-            try:
-
-                if ShutoffTimeIntegerMinutes not in self.AutoShutoffTimeIntegerMinutes0to30_AcceptableValuesList:
-                    ShutoffTimeIntegerMinutes = 0 #disabled
-                    print("SetAutoShutoffTimeIntegerMinutes0to30: Error, ShutoffTimeIntegerMinutes must be an integer in " +str(self.AutoShutoffTimeIntegerMinutes0to30_AcceptableValuesList) + ", with 0 = disabled.")
-
-                StringToTx = "AOFF" + str(int(ShutoffTimeIntegerMinutes)) + "\r\n" #AOFFn Auto-shutoff. n=0-30 minutes. 0=auto shutoff disabled
-                self.MainThread_TxMessageToSend_Queue.put(StringToTx)
-
-                return 1
-
-            except:
-                exceptions = sys.exc_info()[0]
-                print("SetAutoShutoffTimeIntegerMinutes0to30, exceptions: %s" % exceptions)
-
-        else:
-            print("SetAutoShutoffTimeIntegerMinutes0to30: Error, SerialConnectedFlag = 0, cannot issue command.")
-            return 0
-    ##########################################################################################################
-    ##########################################################################################################
-
-    ##########################################################################################################
-    ##########################################################################################################
-    def SaveCurrentSettingsToMemory(self):
-
-        if self.SerialConnectedFlag == 1:
-            try:
-                StringToTx = "SAVE" + "\r\n" #SAVE Save current settings in nonvolatile memory
-                self.MainThread_TxMessageToSend_Queue.put(StringToTx)
-
-                return 1
-
-            except:
-                exceptions = sys.exc_info()[0]
-                print("SaveCurrentSettingsToMemory, exceptions: %s" % exceptions)
-
-        else:
-            print("SaveCurrentSettingsToMemory: Error, SerialConnectedFlag = 0, cannot issue command.")
-            return 0
-    ##########################################################################################################
-    ##########################################################################################################
-
-    ##########################################################################################################
-    ##########################################################################################################
-    def ListCurrentSettingsAndStatus(self):
-
-        if self.SerialConnectedFlag == 1:
-            try:
-                StringToTx = "LIST" + "\r\n" #List current settings and status
-                self.MainThread_TxMessageToSend_Queue.put(StringToTx)
-
-                return 1
-
-            except:
-                exceptions = sys.exc_info()[0]
-                print("ListCurrentSettingsAndStatus, exceptions: %s" % exceptions)
-
-        else:
-            print("ListCurrentSettingsAndStatus: Error, SerialConnectedFlag = 0, cannot issue command.")
-            return 0
-    ##########################################################################################################
-    ##########################################################################################################
-
     ########################################################################################################## 
     ##########################################################################################################
-    def SetReadingMode(self, ReadingModeString = "RealTime"):
+    def SetUnits(self, UnitsToSet = "N.m", SendSerialMessageImmediatelyFlag=0, PrintDebugFlag=0):
 
         if self.SerialConnectedFlag == 1:
             try:
 
-                if ReadingModeString not in self.ReadingModeString_AcceptableValuesList:
-                    ReadingModeString = "RealTime_CUR"
-                    print("SetReadingMode: Error, ReadingModeString must be contained within " + str(self.ReadingModeString_AcceptableValuesList))
+                ##########################################################################################################
+                if UnitsToSet not in self.TorqueReadingUnits_AcceptableValuesList:
+                    UnitsToSet = "N.m"
+                    print("SetUnits: Error, UnitsToSet must be contained within " + str(self.UnitsToSet_AcceptableValuesList))
+                ##########################################################################################################
 
-                StringToTx = ReadingModeString.split("_")[1] + "\r\n" #Split apart single string into list based on "_".
-                self.MainThread_TxMessageToSend_Queue.put(StringToTx)
+                ##########################################################################################################
+                if UnitsToSet == "N.m":
+                    BytearrayToTx = bytearray([0x53, 0x50, 0x01])
+                ##########################################################################################################
 
-                return 1
+                ##########################################################################################################
+                if UnitsToSet == "N.cm":
+                    BytearrayToTx = bytearray([0x53, 0x50, 0x02])
+                ##########################################################################################################
 
-            except:
-                exceptions = sys.exc_info()[0]
-                print("SetReadingMode, exceptions: %s" % exceptions)
+                '''
+                ########################################################################################################## On 11/13/24, it appeared that "kgf.m" are not commandable even though they appear in the data-sheet.
+                if UnitsToSet == "kgf.m":
+                    BytearrayToTx = bytearray([0x53, 0x50, 0x03])
+                ##########################################################################################################
+                '''
 
-        else:
-            print("SetReadingMode: Error, SerialConnectedFlag = 0, cannot issue command.")
-            return 0
-    ##########################################################################################################
-    ##########################################################################################################
+                ##########################################################################################################
+                if UnitsToSet == "kgf.cm":
+                    BytearrayToTx = bytearray([0x53, 0x50, 0x04])
+                ##########################################################################################################
 
-    ########################################################################################################## 
-    ##########################################################################################################
-    def SetDataOutputStreamNoUnitsOrUnits0or1(self, UnitsOrUnits0or1 = 1):
+                ##########################################################################################################
+                if UnitsToSet == "lbf.ft":
+                    BytearrayToTx = bytearray([0x53, 0x50, 0x05])
+                ##########################################################################################################
 
-        if self.SerialConnectedFlag == 1:
-            try:
+                ##########################################################################################################
+                if UnitsToSet == "lbf.in":
+                    BytearrayToTx = bytearray([0x53, 0x50, 0x06])
+                ##########################################################################################################
 
-                if UnitsOrUnits0or1 == 1:
-                    StringToTx = "FULL" + "\r\n" #FULL: USB/RS-232 transmission with units
+                '''
+                ########################################################################################################## On 11/13/24, it appeared that "N.mm" are not commandable even though they appear in the data-sheet.
+                if UnitsToSet == "N.mm":
+                    BytearrayToTx = bytearray([0x53, 0x50, 0x07])
+                ##########################################################################################################
+                '''
+
+                ##########################################################################################################
+                if SendSerialMessageImmediatelyFlag == 0:
+                    self.DedicatedTxThread_TxMessageBytearrayToSend_Queue.put(BytearrayToTx)
                 else:
-                    StringToTx = "NUM"  + "\r\n" #USB/RS-232 transmission without units (only numeric values)
+                    self.SendSerialBytearrrayToTx(BytearrayToTx, PrintDebugFlag=0)
+                ##########################################################################################################
 
-                self.MainThread_TxMessageToSend_Queue.put(StringToTx)
+                ##########################################################################################################
+                if PrintDebugFlag == 1:
+                    print("SetUnits event fired, setting units to " + str(UnitsToSet))
+                ##########################################################################################################
 
+                ##########################################################################################################
                 return 1
+                ##########################################################################################################
 
             except:
                 exceptions = sys.exc_info()[0]
-                print("SetDataOutputStreamNoUnitsOrUnits0or1, exceptions: %s" % exceptions)
+                print("SetUnits, exceptions: %s" % exceptions)
+                traceback.print_exc()
 
         else:
-            print("SetDataOutputStreamNoUnitsOrUnits0or1: Error, SerialConnectedFlag = 0, cannot issue command.")
+            print("SetUnits: Error, SerialConnectedFlag = 0, cannot issue command.")
             return 0
     ##########################################################################################################
     ##########################################################################################################
 
     ########################################################################################################## 
     ##########################################################################################################
-    def SetSamplesPerSecond(self, SamplesPerSecond = 250):
+    def StartVariableStreaming(self, SamplesPerSecond = 100, SendSerialMessageImmediatelyFlag=0, PrintDebugFlag=0):
 
         if self.SerialConnectedFlag == 1:
             try:
 
+                ##########################################################################################################
                 if SamplesPerSecond not in self.SamplesPerSecond_AcceptableValuesList:
-                    SamplesPerSecond = 250
-                    print("SetSamplesPerSecond: Error, SamplesPerSecond must be contained within " + str(self.SamplesPerSecond_AcceptableValuesList))
+                    SamplesPerSecond = 100
+                    print("StartVariableStreaming: Error, SamplesPerSecond must be contained within " + str(self.SamplesPerSecond_AcceptableValuesList))
+                ##########################################################################################################
 
-                StringToTx = "AOUT" + str(int(SamplesPerSecond)) + "\r\n" #AOUTn Auto-transmit n times per second n=1,2,5,10,25,50,125,250. 0=disabled. Note: n = 1 = yields 50 times per second.
-                self.MainThread_TxMessageToSend_Queue.put(StringToTx)
+                ##########################################################################################################
+                if SamplesPerSecond == 10:
+                    BytearrayToTx = bytearray([0x3F, 0x43, 0x02])
+                ##########################################################################################################
 
+                ##########################################################################################################
+                if SamplesPerSecond == 20:
+                    BytearrayToTx = bytearray([0x3F, 0x43, 0x03])
+                ##########################################################################################################
+
+                ##########################################################################################################
+                if SamplesPerSecond == 50:
+                    BytearrayToTx = bytearray([0x3F, 0x43, 0x04])
+                ##########################################################################################################
+
+                ##########################################################################################################
+                if SamplesPerSecond == 100:
+                    BytearrayToTx = bytearray([0x3F, 0x43, 0x05])
+                ##########################################################################################################
+
+                ##########################################################################################################
+                if SendSerialMessageImmediatelyFlag == 0:
+                    self.DedicatedTxThread_TxMessageBytearrayToSend_Queue.put(BytearrayToTx)
+                else:
+                    self.SendSerialBytearrrayToTx(BytearrayToTx, PrintDebugFlag=0)
+                ##########################################################################################################
+
+                ##########################################################################################################
+                if PrintDebugFlag == 1:
+                    print("StartVariableStreaming event fired!")
+                ##########################################################################################################
+
+                ##########################################################################################################
                 return 1
+                ##########################################################################################################
 
             except:
                 exceptions = sys.exc_info()[0]
-                print("SetSamplesPerSecond, exceptions: %s" % exceptions)
+                print("StartVariableStreaming, exceptions: %s" % exceptions)
 
         else:
-            print("SetSamplesPerSecond: Error, SerialConnectedFlag = 0, cannot issue command.")
+            print("StartVariableStreaming: Error, SerialConnectedFlag = 0, cannot issue command.")
             return 0
     ##########################################################################################################
     ##########################################################################################################
-    
+
     ########################################################################################################## 
     ##########################################################################################################
-    def StopVariableStreaming(self):
+    def StopVariableStreaming(self, SendSerialMessageImmediatelyFlag=0, PrintDebugFlag=0):
 
         if self.SerialConnectedFlag == 1:
             try:
 
-                self.StartVariableStreaming(0)
+                ##########################################################################################################
+                BytearrayToTx = bytearray([0x3F, 0x43, 0xFF])
+
+                if SendSerialMessageImmediatelyFlag == 0:
+                    self.DedicatedTxThread_TxMessageBytearrayToSend_Queue.put(BytearrayToTx)
+                else:
+                    self.SendSerialBytearrrayToTx(BytearrayToTx, PrintDebugFlag=0)
+                ##########################################################################################################
+
+                ##########################################################################################################
+                if PrintDebugFlag == 1:
+                    print("StopVariableStreaming event fired!")
+                ##########################################################################################################
 
                 return 1
 
@@ -1140,106 +1230,24 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
     ##########################################################################################################
     ##########################################################################################################
 
-    ##########################################################################################################
-    ##########################################################################################################
-    def SetAveraging(self, AveragingEnabledBoolean0or1):
-
-        if self.SerialConnectedFlag == 1:
-            try:
-
-                if AveragingEnabledBoolean0or1 not in [0, 1]:
-                    print("SetAveraging: Error, AveragingEnabledBoolean0or1 must be 0 or 1.")
-                    return
-
-                if AveragingEnabledBoolean0or1 == 1:
-                    ##########################################################################################################
-                    StringToTx = "A" + "\r\n" #A: Enable Average mode
-                    self.MainThread_TxMessageToSend_Queue.put(StringToTx)
-
-
-                    #AM Select Average mode (if enabled) for primary reading
-                    #ATn Average time. n=0.1-300.0 seconds
-                    #DELn Initial delay. n=0.1-300.0 seconds
-                    #TRFn Trigger Torque. n=value (+ for compression/clockwise, - for tension/counterclockwise)
-              
-                    ##########################################################################################################
-
-                else:
-                    ##########################################################################################################
-                    StringToTx = "AD" + "\r\n" #AD: Disable Average mode
-                    self.MainThread_TxMessageToSend_Queue.put(StringToTx)
-                    ##########################################################################################################
-
-                self.SetAveraging_EventHasHappenedFlag = 1
-
-                return 1
-
-            except:
-                exceptions = sys.exc_info()[0]
-                print("SetAveraging, exceptions: %s" % exceptions)
-
-        else:
-            print("SetAveraging: Error, SerialConnectedFlag = 0, cannot issue command.")
-            return 0
-    ##########################################################################################################
-    ##########################################################################################################
-
-    ##########################################################################################################
-    ##########################################################################################################
-    def SetFilterExponent0to10ForNumberOfSamplesToBeAveraged(self, FilterDisplayedOrCurrentReadings0or1, FilterExponent0to10ForNumberOfSamplesToBeAveraged = 0):
-
-        if self.SerialConnectedFlag == 1:
-            try:
-
-                if FilterDisplayedOrCurrentReadings0or1 not in [0, 1]:
-                    print("SetFilterExponent0to10ForNumberOfSamplesToBeAveraged: Error, FilterDisplayedOrCurrentReadings0or1 must be in [0, 1].")
-                    return
-
-                if FilterExponent0to10ForNumberOfSamplesToBeAveraged not in self.FilterExponent0to10ForNumberOfSamplesToBeAveraged_AcceptableValuesList:
-                    print("SetFilterExponent0to10ForNumberOfSamplesToBeAveraged: Error, AveragingEnabledBoolean0or1 must be in " + str(self.FilterExponent0to10ForNumberOfSamplesToBeAveraged_AcceptableValuesList))
-                    return
-
-
-                if FilterDisplayedOrCurrentReadings0or1 == 1:
-                    ##########################################################################################################
-                    StringToTx = "FLTC" + str(int(FilterExponent0to10ForNumberOfSamplesToBeAveraged))  + "\r\n" #Digital filter for displayed readings, n= 0-10, filter = 2exp(n), ex: n=0= no filter, n=10=1024 samples averaged
-                    self.MainThread_TxMessageToSend_Queue.put(StringToTx)
-                    ##########################################################################################################
-
-                else:
-                    ##########################################################################################################
-                    StringToTx = "FLTP" + str(int(FilterExponent0to10ForNumberOfSamplesToBeAveraged))  + "\r\n" #Digital filter for displayed readings, n= 0-10, filter = 2exp(n), ex: n=0= no filter, n=10=1024 samples averaged
-                    self.MainThread_TxMessageToSend_Queue.put(StringToTx)
-                    ##########################################################################################################
-
-                self.SetFilterExponent0to10ForNumberOfSamplesToBeAveraged_EventHasHappenedFlag = 1
-
-                return 1
-
-            except:
-                exceptions = sys.exc_info()[0]
-                print("SetFilterExponent0to10ForNumberOfSamplesToBeAveraged, exceptions: %s" % exceptions)
-
-        else:
-            print("SetFilterExponent0to10ForNumberOfSamplesToBeAveraged: Error, SerialConnectedFlag = 0, cannot issue command.")
-            return 0
-    ##########################################################################################################
-    ##########################################################################################################
-    '''
-
     ########################################################################################################## 
     ##########################################################################################################
-    def ResetPeak(self):
+    def ResetPeak(self, SendSerialMessageImmediatelyFlag=0, PrintDebugFlag=1):
 
         if self.SerialConnectedFlag == 1:
             try:
 
                 StringToTx = "CLR" + "\r\n" #CLR: Clear peaks
-                self.MainThread_TxMessageToSend_Queue.put(StringToTx)
+
+                if SendSerialMessageImmediatelyFlag == 0:
+                    self.DedicatedTxThread_TxMessageStringToSend_Queue.put(StringToTx)
+                else:
+                    self.SendSerialStrToTx(StringToTx, PrintDebugFlag=0)
 
                 self.ResetPeak_EventHasHappenedFlag = 1
 
-                #self.ResetLatchedAlarms()
+                if PrintDebugFlag == 1:
+                    print("ResetPeak event fired!")
 
                 return 1
 
@@ -1255,16 +1263,24 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
     ##########################################################################################################
     ##########################################################################################################
-    def ResetTare(self):
+    def ResetTare(self, SendSerialMessageImmediatelyFlag=0, PrintDebugFlag=1):
 
         if self.SerialConnectedFlag == 1:
             try:
-                
-                StringToTx = "Z" + "\r\n" #Z: Zero display and perform the CLR function
+
+                ##########################################################################################################
+                BytearrayToTx = bytearray([0x50, 0x5A, 0x00])
+
+                if SendSerialMessageImmediatelyFlag == 0:
+                    self.DedicatedTxThread_TxMessageBytearrayToSend_Queue.put(BytearrayToTx)
+                else:
+                    self.SendSerialBytearrrayToTx(BytearrayToTx, PrintDebugFlag=0)
 
                 self.ResetTare_EventHasHappenedFlag = 1
-                
-                self.MainThread_TxMessageToSend_Queue.put(StringToTx)
+                ##########################################################################################################
+
+                if PrintDebugFlag == 1:
+                    print("ResetTare event fired!")
 
                 return 1
 
@@ -1277,33 +1293,6 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
             return 0
     ##########################################################################################################
     ##########################################################################################################
-
-    '''
-    ##########################################################################################################
-    ##########################################################################################################
-    def ResetLatchedAlarms(self):
-
-        if self.SerialConnectedFlag == 1:
-            try:
-                
-                StringToTx = "*1C2" + "\r"
-
-                self.ResetLatchedAlarms_EventHasHappenedFlag = 1
-                
-                self.MainThread_TxMessageToSend_Queue.put(StringToTx)
-
-                return 1
-
-            except:
-                exceptions = sys.exc_info()[0]
-                print("ResetLatchedAlarms, exceptions: %s" % exceptions)
-
-        else:
-            print("ResetLatchedAlarms: Error, SerialConnectedFlag = 0, cannot issue command.")
-            return 0
-    ##########################################################################################################
-    ##########################################################################################################
-    '''
 
     ##########################################################################################################
     ##########################################################################################################
@@ -1334,6 +1323,9 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
             elif InputUnits == "kgf.cm":
                 ConvertedValue_Nm = InputValue*0.0980665
 
+            elif InputUnits == "kgf.m":
+                ConvertedValue_Nm = InputValue*0.980665
+
             elif InputUnits == "lbf.ft":
                 ConvertedValue_Nm = InputValue * 1.355817952
 
@@ -1351,6 +1343,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                 ConvertedValue_Ncm = ConvertedValue_Nm/0.010
                 ConvertedValue_Nmm = ConvertedValue_Nm / 0.010 #IT'S ONLY A FIRMWARE BUG IN THE SHIMPO THAT SAYS N-MM WHEN IT'S ACTUALLY N-CM.
                 ConvertedValue_KGFcm = ConvertedValue_Nm/0.0980665
+                ConvertedValue_KGFm = ConvertedValue_Nm/9.80665002863885
                 ConvertedValue_LBFft = ConvertedValue_Nm/1.355817952
                 ConvertedValue_LBFin = ConvertedValue_Nm/0.112984429
 
@@ -1362,6 +1355,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                                             ("N.cm", ConvertedValue_Ncm),
                                             ("N.mm", ConvertedValue_Nmm),
                                             ("kgf.cm", ConvertedValue_KGFcm),
+                                            ("kgf.m", ConvertedValue_KGFm),
                                             ("lbf.ft", ConvertedValue_LBFft),
                                             ("lbf.in", ConvertedValue_LBFin)])
             else:
@@ -1369,6 +1363,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                                             ("N.cm.PerSec", ConvertedValue_Ncm),
                                             ("N.mm.PerSec", ConvertedValue_Nmm),
                                             ("kgf.cm.PerSec", ConvertedValue_KGFcm),
+                                            ("kgf.m.PerSec", ConvertedValue_KGFm),
                                             ("lbf.ft.PerSec", ConvertedValue_LBFft),
                                             ("lbf.in.PerSec", ConvertedValue_LBFin)])
 
@@ -1384,6 +1379,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                                         ("N.cm", ConvertedValue_Ncm),
                                         ("N.mm", ConvertedValue_Nmm),
                                         ("kgf.cm", ConvertedValue_KGFcm),
+                                        ("kgf.m", ConvertedValue_KGFm),
                                         ("lbf.ft", ConvertedValue_LBFft),
                                         ("lbf.in", ConvertedValue_LBFin)])
 
@@ -1395,18 +1391,165 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
     ########################################################################################################## unicorn
     ##########################################################################################################
     ##########################################################################################################
-    def MainThread(self):
+    ##########################################################################################################
+    def DedicatedTxThread(self):
 
-        self.MyPrint_WithoutLogFile("Started MainThread for TorqueReaderNidecShimpoFG7000T_ReubenPython3Class object.")
-        self.MainThread_StillRunningFlag = 1
+        self.MyPrint_WithoutLogFile("Started DedicatedTxThread for TorqueReaderNidecShimpoFG7000T_ReubenPython3Class object.")
+        self.DedicatedTxThread_StillRunningFlag = 1
 
-        self.StartingTime_CalculatedFromMainThread = self.getPreciseSecondsTimeStampString()
+        self.SetUnits(self.TorqueReadingUnits_DefaultUnits, SendSerialMessageImmediatelyFlag=1, PrintDebugFlag=0)
+        time.sleep(self.TimeBetweenSendingSettingCommands)
+        self.StartVariableStreaming(100, SendSerialMessageImmediatelyFlag=1, PrintDebugFlag=0)
+        time.sleep(self.TimeBetweenSendingSettingCommands)
+
+        self.StartingTime_CalculatedFromDedicatedTxThread = self.getPreciseSecondsTimeStampString()
+        ##########################################################################################################
+        ##########################################################################################################
+        ##########################################################################################################
+        while self.EXIT_PROGRAM_FLAG == 0:
+
+            try:
+                ##########################################################################################################
+                ##########################################################################################################
+                self.CurrentTime_CalculatedFromDedicatedTxThread = self.getPreciseSecondsTimeStampString() - self.StartingTime_CalculatedFromDedicatedTxThread
+                ##########################################################################################################
+                ##########################################################################################################
+
+                ##########################################################################################################
+                ##########################################################################################################
+
+                '''
+                ##########################################################################################################
+                if self.TorqueReadingUnits_DefaultUnitsHaveBeenSetFlag == 0:
+
+                    for Counter in range(0, 5):
+                        self.SetUnits(self.TorqueReadingUnits_DefaultUnits, SendSerialMessageImmediatelyFlag=0, PrintDebugFlag=1)
+
+                    self.TorqueReadingUnits_DefaultUnitsHaveBeenSetFlag = 1
+                ##########################################################################################################
+                '''
+
+                ##########################################################################################################
+                if self.ToggleDataStreamOnOrOff_EventNeedsToBeFiredFlag == 1:
+
+                    if self.DataStream_State == 1:
+                        self.DataStream_State = 0
+                        self.StopVariableStreaming(PrintDebugFlag=1)
+                    else:
+                        self.DataStream_State = 1
+                        self.StartVariableStreaming(self.SamplesPerSecond, PrintDebugFlag=1)
+
+                    self.ToggleDataStreamOnOrOff_EventNeedsToBeFiredFlag = 0
+                ##########################################################################################################
+
+                ##########################################################################################################
+                if self.ToggleUnits_EventNeedsToBeFiredFlag == 1:
+                    self.SetUnits(self.TorqueReadingUnits_AcceptableValuesList[self.ToggleUnits_EventCounter], SendSerialMessageImmediatelyFlag=0, PrintDebugFlag=1)
+
+                    self.ToggleUnits_EventCounter = self.ToggleUnits_EventCounter + 1
+
+                    if self.ToggleUnits_EventCounter == len(self.TorqueReadingUnits_AcceptableValuesList):
+                        self.ToggleUnits_EventCounter = 0
+
+                    self.ToggleUnits_EventNeedsToBeFiredFlag = 0
+                ##########################################################################################################
+
+                ##########################################################################################################
+                if self.ResetPeak_EventNeedsToBeFiredFlag == 1:
+                    self.ResetPeak()
+                    self.ResetPeak_EventNeedsToBeFiredFlag = 0
+                ##########################################################################################################
+
+                ##########################################################################################################
+                if self.ResetTare_EventNeedsToBeFiredFlag == 1:
+                    self.ResetTare()
+                    self.ResetTare_EventNeedsToBeFiredFlag = 0
+                ##########################################################################################################
+
+                ##########################################################################################################
+                ##########################################################################################################
+
+                ##########################################################################################################
+                ##########################################################################################################
+                if self.DedicatedTxThread_TxMessageStringToSend_Queue.qsize() > 0:
+
+                    ##########################################################################################################
+                    TxDataToWrite = self.DedicatedTxThread_TxMessageStringToSend_Queue.get()
+
+                    self.SendSerialStrToTx(TxDataToWrite, PrintDebugFlag=1)
+
+                    time.sleep(self.TimeBetweenSendingSettingCommands)
+                    ##########################################################################################################
+
+                ##########################################################################################################
+                ##########################################################################################################
+
+                ##########################################################################################################
+                ##########################################################################################################
+                if self.DedicatedTxThread_TxMessageBytearrayToSend_Queue.qsize() > 0:
+
+                    ##########################################################################################################
+                    TxDataToWrite = self.DedicatedTxThread_TxMessageBytearrayToSend_Queue.get()
+
+                    self.SendSerialBytearrrayToTx(TxDataToWrite, PrintDebugFlag=0)
+
+                    time.sleep(self.TimeBetweenSendingSettingCommands)
+                    ##########################################################################################################
+
+                ##########################################################################################################
+                ##########################################################################################################
+
+                ##########################################################################################################
+                ##########################################################################################################
+                self.UpdateFrequencyCalculation_DedicatedTxThread_Filtered()
+
+                if self.DedicatedTxThread_TimeToSleepEachLoop > 0.0:
+                    if self.DedicatedTxThread_TimeToSleepEachLoop > 0.001:
+                        time.sleep(self.DedicatedTxThread_TimeToSleepEachLoop - 0.001) #The "- 0.001" corrects for slight deviation from intended frequency due to other functions being called.
+                    else:
+                        time.sleep(self.DedicatedTxThread_TimeToSleepEachLoop)
+                ##########################################################################################################
+                ##########################################################################################################
+
+            except:
+                exceptions = sys.exc_info()[0]
+                print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class, DedicatedTxThread, Inner Exceptions: %s" % exceptions)
+                traceback.print_exc()
+
+        ##########################################################################################################
+        ##########################################################################################################
+        ##########################################################################################################
+
+        self.MyPrint_WithoutLogFile("Finished DedicatedTxThread for TorqueReaderNidecShimpoFG7000T_ReubenPython3Class object.")
+        self.DedicatedTxThread_StillRunningFlag = 0
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ########################################################################################################## unicorn
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    def DedicatedRxThread(self):
+
+        self.MyPrint_WithoutLogFile("Started DedicatedRxThread for TorqueReaderNidecShimpoFG7000T_ReubenPython3Class object.")
+        self.DedicatedRxThread_StillRunningFlag = 1
+
+        self.StartingTime_CalculatedFromDedicatedRxThread = self.getPreciseSecondsTimeStampString()
+        ##########################################################################################################
+        ##########################################################################################################
         ##########################################################################################################
         ##########################################################################################################
         while self.EXIT_PROGRAM_FLAG == 0:
 
             ##########################################################################################################
-            self.CurrentTime_CalculatedFromMainThread = self.getPreciseSecondsTimeStampString() - self.StartingTime_CalculatedFromMainThread
+            ##########################################################################################################
+            ##########################################################################################################
+            self.CurrentTime_CalculatedFromDedicatedRxThread = self.getPreciseSecondsTimeStampString() - self.StartingTime_CalculatedFromDedicatedRxThread
+            ##########################################################################################################
+            ##########################################################################################################
             ##########################################################################################################
 
             ##########################################################################################################
@@ -1414,13 +1557,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
             ##########################################################################################################
             try:
 
-                ##########################################################################################################
-                ##########################################################################################################
-                self.SendSerialStrToTx("?")
-                ##########################################################################################################
-                ##########################################################################################################
-
-                ##########################################################################################################
+                ###########################################################################################################
                 ##########################################################################################################
                 RxMessage = self.SerialObject.read_until(b'\r') #Example of what we should expect: " -0.0045 N.m",
                 RxMessageString = self.ConvertBytesObjectToString(RxMessage)
@@ -1442,7 +1579,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
                     try:
 
-                        self.MostRecentDataDict["Time"] = self.CurrentTime_CalculatedFromMainThread
+                        self.MostRecentDataDict["Time"] = self.CurrentTime_CalculatedFromDedicatedRxThread
                         self.MostRecentDataDict["MostRecentMessage_Raw"] = RxMessageString
                         self.MostRecentDataDict["MostRecentMessage_SplitIntoList"] = RxMessageStringList
                         self.MostRecentDataDict["MostRecentMessage_LengthOfSplitIntoList"] = len(RxMessageStringList)
@@ -1462,7 +1599,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
                         self.MostRecentDataDict["MeasurementTorqueDerivative_DictOfConvertedValues"] = self.CalculateMeasurementTorqueDerivative()
 
-                        self.MostRecentDataDict["DataStreamingFrequency_CalculatedFromMainThread"] = self.DataStreamingFrequency_CalculatedFromMainThread
+                        self.MostRecentDataDict["DataStreamingFrequency_CalculatedFromDedicatedRxThread"] = self.DataStreamingFrequency_CalculatedFromDedicatedRxThread
 
                         self.MostRecentDataDict["ResetPeak_EventHasHappenedFlag"] = self.ResetPeak_EventHasHappenedFlag
                         self.MostRecentDataDict["ResetTare_EventHasHappenedFlag"] = self.ResetTare_EventHasHappenedFlag
@@ -1475,38 +1612,30 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
                     except:
                         exceptions = sys.exc_info()[0]
-                        print("MainThread, message receiving section, Exceptions: %s" % exceptions)
-                        traceback.print_exc()
+                        print("DedicatedRxThread, message receiving section, Exceptions: %s" % exceptions)
+                        #traceback.print_exc()
                 ##########################################################################################################
                 ##########################################################################################################
 
-            except:
-                exceptions = sys.exc_info()[0]
-                print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class, MainThread, Inner Exceptions: %s" % exceptions)
-                traceback.print_exc()
-
-            ########################################################################################################## These should be outside of the queue and heartbeat
+            ##########################################################################################################
+            ##########################################################################################################
             ##########################################################################################################
 
-            ############################################### USE THE TIME.SLEEP() TO SET THE LOOP FREQUENCY
-            ###############################################
-            ###############################################
-            self.UpdateFrequencyCalculation_MainThread_Filtered()
+            ##########################################################################################################
+            ##########################################################################################################
+            ##########################################################################################################
+            except:
+                exceptions = sys.exc_info()[0]
+                print("DedicatedRxThread, Exceptions: %s" % exceptions)
+                #traceback.print_exc()
+            ##########################################################################################################
+            ##########################################################################################################
+            ##########################################################################################################
 
-            if self.MainThread_TimeToSleepEachLoop > 0.0:
-                if self.MainThread_TimeToSleepEachLoop > 0.001:
-                    time.sleep(self.MainThread_TimeToSleepEachLoop - 0.001) #The "- 0.001" corrects for slight deviation from intended frequency due to other functions being called.
-                else:
-                    time.sleep(self.MainThread_TimeToSleepEachLoop)
-            ###############################################
-            ###############################################
-            ###############################################
-
-        ##########################################################################################################
-        ##########################################################################################################
-
-        self.MyPrint_WithoutLogFile("Finished MainThread for TorqueReaderNidecShimpoFG7000T_ReubenPython3Class object.")
-        self.MainThread_StillRunningFlag = 0
+        self.MyPrint_WithoutLogFile("Finished DedicatedRxThread for TorqueReaderNidecShimpoFG7000T_ReubenPython3Class object.")
+        self.DedicatedRxThread_StillRunningFlag = 0
+    ##########################################################################################################
+    ##########################################################################################################
     ##########################################################################################################
     ##########################################################################################################
     ##########################################################################################################
@@ -1577,68 +1706,57 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
         self.DeviceInfo_Label["text"] = self.NameToDisplay_UserSet + \
                                         "\nUSBtoSerialConverter Serial Number: " + str(self.DesiredSerialNumber_USBtoSerialConverter)
 
-        self.DeviceInfo_Label.grid(row=0, column=0, padx=10, pady=10, columnspan=1, rowspan=1)
+        self.DeviceInfo_Label.grid(row=0, column=0, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=1, rowspan=1)
         #################################################
         #################################################
 
         #################################################
         #################################################
         self.Data_Label = Label(self.myFrame, text="Data_Label", width=120)
-        self.Data_Label.grid(row=0, column=1, padx=10, pady=10, columnspan=1, rowspan=1)
+        self.Data_Label.grid(row=0, column=1, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=1, rowspan=1)
         #################################################
         #################################################
 
         #################################################
         #################################################
         self.ButtonsFrame = Frame(self.myFrame)
-        self.ButtonsFrame.grid(row = 1, column = 0, padx = 10, pady = 10, rowspan = 1, columnspan = 2)
+        self.ButtonsFrame.grid(row = 1, column = 0, padx=self.GUI_PADX, pady=self.GUI_PADY, rowspan = 1, columnspan = 2)
         #################################################
         #################################################
 
         #################################################
         #################################################
         self.ResetPeak_Button = Button(self.ButtonsFrame, text="Reset Peak", state="normal", width=15, command=lambda: self.ResetPeak_Button_Response())
-        self.ResetPeak_Button.grid(row=0, column=0, padx=10, pady=10, columnspan=1, rowspan=1)
+        self.ResetPeak_Button.grid(row=0, column=0, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=1, rowspan=1)
         #################################################
         #################################################
 
         #################################################
         #################################################
         self.ResetTare_Button = Button(self.ButtonsFrame, text="Reset Tare", state="normal", width=20, command=lambda: self.ResetTare_Button_Response())
-        self.ResetTare_Button.grid(row=0, column=1, padx=10, pady=10, columnspan=1, rowspan=1)
-        #################################################
-        #################################################
-
-        '''
-        #################################################
-        #################################################
-        self.ResetLatchedAlarms_Button = Button(self.ButtonsFrame, text="Reset Alarms", state="normal", width=20, command=lambda: self.ResetLatchedAlarms_Button_Response())
-        self.ResetLatchedAlarms_Button.grid(row=0, column=2, padx=10, pady=10, columnspan=1, rowspan=1)
-        #################################################
-        #################################################
-        '''
-
-        '''
-        #################################################
-        #################################################
-        self.ListCurrentSettingsAndStatus_Button = Button(self.ButtonsFrame, text="List Settings", state="normal", width=20, command=lambda: self.ListCurrentSettingsAndStatus_Button_Response())
-        self.ListCurrentSettingsAndStatus_Button.grid(row=0, column=2, padx=10, pady=10, columnspan=1, rowspan=1)
+        self.ResetTare_Button.grid(row=0, column=1, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=1, rowspan=1)
         #################################################
         #################################################
 
         #################################################
         #################################################
         self.ToggleDataStreamOnOrOff_Button = Button(self.ButtonsFrame, text="Toggle Data", state="normal", width=15, command=lambda: self.ToggleDataStreamOnOrOff_Button_Response())
-        self.ToggleDataStreamOnOrOff_Button.grid(row=1, column=0, padx=10, pady=10, columnspan=1, rowspan=1)
+        self.ToggleDataStreamOnOrOff_Button.grid(row=1, column=0, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=1, rowspan=1)
         #################################################
         #################################################
-        '''
+
+        #################################################
+        #################################################
+        self.ToggleUnits_Button = Button(self.ButtonsFrame, text="Toggle Units", state="normal", width=15, command=lambda: self.ToggleUnits_Button_Response())
+        self.ToggleUnits_Button.grid(row=2, column=0, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=1, rowspan=1)
+        #################################################
+        #################################################
 
         #################################################
         #################################################
         self.PrintToGui_Label = Label(self.myFrame, text="PrintToGui_Label", width=75)
         if self.EnableInternal_MyPrint_Flag == 1:
-            self.PrintToGui_Label.grid(row=2, column=0, padx=10, pady=10, columnspan=10, rowspan=10)
+            self.PrintToGui_Label.grid(row=2, column=0, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=10, rowspan=10)
         #################################################
         #################################################
 
@@ -1693,31 +1811,6 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
     ##########################################################################################################
     ##########################################################################################################
 
-    '''
-    ##########################################################################################################
-    ##########################################################################################################
-    def ResetLatchedAlarms_Button_Response(self):
-
-        self.ResetLatchedAlarms_EventNeedsToBeFiredFlag = 1
-
-        #self.MyPrint_WithoutLogFile("ResetLatchedAlarms_Button_Response: Event fired!")
-
-    ##########################################################################################################
-    ##########################################################################################################
-    '''
-
-    '''
-    ##########################################################################################################
-    ##########################################################################################################
-    def ListCurrentSettingsAndStatus_Button_Response(self):
-
-        self.ListCurrentSettingsAndStatus_EventNeedsToBeFiredFlag = 1
-
-        #self.MyPrint_WithoutLogFile("ListCurrentSettingsAndStatus_Button_Response: Event fired!")
-
-    ##########################################################################################################
-    ##########################################################################################################
-
     ##########################################################################################################
     ##########################################################################################################
     def ToggleDataStreamOnOrOff_Button_Response(self):
@@ -1728,7 +1821,17 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
     ##########################################################################################################
     ##########################################################################################################
-    '''
+
+    ##########################################################################################################
+    ##########################################################################################################
+    def ToggleUnits_Button_Response(self):
+
+        self.ToggleUnits_EventNeedsToBeFiredFlag = 1
+
+        #self.MyPrint_WithoutLogFile("ToggleUnits_Button_Response: Event fired!")
+
+    ##########################################################################################################
+    ##########################################################################################################
 
     ##########################################################################################################
     ##########################################################################################################
@@ -1756,7 +1859,6 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                                                                                                     NumberOfTabsBetweenItems = 3)
                     #######################################################
 
-                    '''
                     #######################################################
                     self.ToggleDataStreamOnOrOff_Button["text"] = "Data Stream\n" + str(self.DataStream_State)
 
@@ -1765,7 +1867,6 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                     else:
                         self.ToggleDataStreamOnOrOff_Button["bg"] = self.TKinter_LightRedColor
                     #######################################################
-                    '''
 
                     #######################################################
                     self.PrintToGui_Label.config(text=self.PrintToGui_Label_TextInput_Str)
@@ -1822,7 +1923,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
     ##########################################################################################################
     ##########################################################################################################
 
-    ##########################################################################################################
+    ###########################################################################################################
     ##########################################################################################################
     ##########################################################################################################
     ##########################################################################################################
@@ -1988,32 +2089,44 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
     ##########################################################################################################
     def ConvertDictToProperlyFormattedStringForPrinting(self, DictToPrint, NumberOfDecimalsPlaceToUse = 3, NumberOfEntriesPerLine = 1, NumberOfTabsBetweenItems = 3):
 
-        ProperlyFormattedStringForPrinting = ""
-        ItemsPerLineCounter = 0
+        try:
+            ProperlyFormattedStringForPrinting = ""
+            ItemsPerLineCounter = 0
 
-        for Key in DictToPrint:
+            for Key in DictToPrint:
 
-            ##########################################################################################################
-            if isinstance(DictToPrint[Key], dict): #RECURSION
-                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
-                                                     Key + ":\n" + \
-                                                     self.ConvertDictToProperlyFormattedStringForPrinting(DictToPrint[Key], NumberOfDecimalsPlaceToUse, NumberOfEntriesPerLine, NumberOfTabsBetweenItems)
+                ##########################################################################################################
+                if isinstance(DictToPrint[Key], dict): #RECURSION
+                    ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
+                                                         str(Key) + ":\n" + \
+                                                         self.ConvertDictToProperlyFormattedStringForPrinting(DictToPrint[Key],
+                                                                                                              NumberOfDecimalsPlaceToUse,
+                                                                                                              NumberOfEntriesPerLine,
+                                                                                                              NumberOfTabsBetweenItems)
 
-            else:
-                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
-                                                     Key + ": " + \
-                                                     self.ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(DictToPrint[Key], 0, NumberOfDecimalsPlaceToUse)
-            ##########################################################################################################
+                else:
+                    ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
+                                                         str(Key) + ": " + \
+                                                         self.ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(DictToPrint[Key],
+                                                                                                                                               0,
+                                                                                                                                               NumberOfDecimalsPlaceToUse)
+                ##########################################################################################################
 
-            ##########################################################################################################
-            if ItemsPerLineCounter < NumberOfEntriesPerLine - 1:
-                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\t"*NumberOfTabsBetweenItems
-                ItemsPerLineCounter = ItemsPerLineCounter + 1
-            else:
-                ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\n"
-                ItemsPerLineCounter = 0
-            ##########################################################################################################
+                ##########################################################################################################
+                if ItemsPerLineCounter < NumberOfEntriesPerLine - 1:
+                    ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\t"*NumberOfTabsBetweenItems
+                    ItemsPerLineCounter = ItemsPerLineCounter + 1
+                else:
+                    ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\n"
+                    ItemsPerLineCounter = 0
+                ##########################################################################################################
 
-        return ProperlyFormattedStringForPrinting
+            return ProperlyFormattedStringForPrinting
+
+        except:
+            exceptions = sys.exc_info()[0]
+            print("ConvertDictToProperlyFormattedStringForPrinting, Exceptions: %s" % exceptions)
+            return ""
+            #traceback.print_exc()
     ##########################################################################################################
     ##########################################################################################################

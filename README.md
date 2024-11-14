@@ -18,11 +18,11 @@ www.reubotics.com
 
 Apache 2 License
 
-Software Revision C, 07/31/2024
+Software Revision D, 11/13/2024
 
 Verified working on:
 
-Python 3.8.
+Python 3.11.
 
 Windows 10/11 64-bit
 
@@ -46,7 +46,8 @@ Note for the serial ports on the device:
 
 #####
 
-1. The USB-B port is actually a USB-serial output, and it works at seemingly any baud (9600, 19200, 38400, 1Mbps, 4Mbps, etc.) Unfortunately, there's no latency-timer setting available in this Microsoft 10.0.22621.3672 driver.
+1. The USB-B port is actually a USB-serial output, and it works at seemingly any baud (9600, 19200, 38400, 1Mbps, 4Mbps, etc.)
+Unfortunately, there's no latency-timer setting available in this Microsoft 10.0.22621.3672 driver.
 
 #####
 

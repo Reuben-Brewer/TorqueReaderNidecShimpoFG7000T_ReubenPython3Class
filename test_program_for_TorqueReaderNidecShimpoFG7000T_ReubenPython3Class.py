@@ -6,12 +6,20 @@ reuben.brewer@gmail.com
 www.reubotics.com
 
 Apache 2 License
-Software Revision D, 11/13/2024
+Software Revision E, 01/05/2026
 
-Verified working on: Python 3.11 for Windows 10/11 64-bit and Raspberry Pi Buster (may work on Mac in non-GUI mode, but haven't tested yet).
+Verified working on: Python 3.11/12/13 for Windows 10/11 64-bit and Raspberry Pi Bookworm (may work on Mac in non-GUI mode, but haven't tested yet).
 '''
 
 __author__ = 'reuben.brewer'
+
+##########################################################################################################
+##########################################################################################################
+
+##########################################
+import ReubenGithubCodeModulePaths #Replaces the need to have "ReubenGithubCodeModulePaths.pth" within "C:\Anaconda3\Lib\site-packages".
+ReubenGithubCodeModulePaths.Enable()
+##########################################
 
 ##########################################
 from CSVdataLogger_ReubenPython3Class import *
@@ -27,7 +35,10 @@ import platform
 import time
 import datetime
 import threading
+import math
+import traceback
 import collections
+import keyboard
 ##########################################
 
 ##########################################
@@ -43,6 +54,9 @@ if platform.system() == "Windows":
     winmm = ctypes.WinDLL('winmm')
     winmm.timeBeginPeriod(1) #Set minimum timer resolution to 1ms so that time.sleep(0.001) behaves properly.
 ##########################################
+
+##########################################################################################################
+##########################################################################################################
 
 ###########################################################################################################
 ##########################################################################################################
@@ -267,15 +281,16 @@ def GUI_update_clock():
     global TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts
     global TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfLabels
 
-    global MyPrint_ReubenPython2and3ClassObject
-    global MyPrint_OPEN_FLAG
-    global SHOW_IN_GUI_MyPrint_FLAG
-
-    global CSVdataLogger_ReubenPython3ClassObject
+    global CSVdataLogger_Object
     global CSVdataLogger_OPEN_FLAG
     global SHOW_IN_GUI_CSVdataLogger_FLAG
 
+    global MyPrint_Object
+    global MyPrint_OPEN_FLAG
+    global SHOW_IN_GUI_MyPrint_FLAG
+
     if USE_GUI_FLAG == 1:
+
         if EXIT_PROGRAM_FLAG == 0:
         #########################################################
         #########################################################
@@ -293,13 +308,13 @@ def GUI_update_clock():
             #########################################################
 
             #########################################################
-            if MyPrint_OPEN_FLAG == 1 and SHOW_IN_GUI_MyPrint_FLAG == 1:
-                MyPrint_ReubenPython2and3ClassObject.GUI_update_clock()
+            if CSVdataLogger_OPEN_FLAG == 1 and SHOW_IN_GUI_CSVdataLogger_FLAG == 1:
+                CSVdataLogger_Object.GUI_update_clock()
             #########################################################
 
             #########################################################
-            if CSVdataLogger_OPEN_FLAG == 1 and SHOW_IN_GUI_CSVdataLogger_FLAG == 1:
-                CSVdataLogger_ReubenPython3ClassObject.GUI_update_clock()
+            if MyPrint_OPEN_FLAG == 1 and SHOW_IN_GUI_MyPrint_FLAG == 1:
+                MyPrint_Object.GUI_update_clock()
             #########################################################
 
             root.after(GUI_RootAfterCalNmackInterval_Milliseconds, GUI_update_clock)
@@ -311,12 +326,16 @@ def GUI_update_clock():
 
 ##########################################################################################################
 ##########################################################################################################
-def ExitProgram_Callback():
+def ExitProgram_Callback(OptionalArugment = 0):
     global EXIT_PROGRAM_FLAG
+    global CSVdataLogger_MostRecentDict_IsSavingFlag
 
     print("ExitProgram_Callback event fired!")
 
-    EXIT_PROGRAM_FLAG = 1
+    if CSVdataLogger_MostRecentDict_IsSavingFlag == 0:
+        EXIT_PROGRAM_FLAG = 1
+    else:
+        print("ExitProgram_Callback, ERROR! Still saving data.")
 ##########################################################################################################
 ##########################################################################################################
 
@@ -330,6 +349,16 @@ def GUI_Thread():
     global root_height
     global GUI_RootAfterCalNmackInterval_Milliseconds
     global USE_TABS_IN_GUI_FLAG
+
+    global TorqueReaderNidecShimpoFG7000T_NumberOfSensors
+    global TorqueReaderNidecShimpoFG7000T_ListOfObjects
+    global TorqueReaderNidecShimpoFG7000T_OPEN_FLAG
+
+    global CSVdataLogger_Object
+    global CSVdataLogger_OPEN_FLAG
+
+    global MyPrint_Object
+    global MyPrint_OPEN_FLAG
 
     ################################################# KEY GUI LINE
     #################################################
@@ -409,19 +438,43 @@ def GUI_Thread():
     #################################################
     #################################################
 
-    ##########################################################################################################
+    #################################################
+    #################################################
+    if TorqueReaderNidecShimpoFG7000T_OPEN_FLAG == 1:
+        for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
+            TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].CreateGUIobjects(TkinterParent=Tab_TorqueReaderNidecShimpoFG7000T)
+    #################################################
+    #################################################
+
+    #################################################
+    #################################################
+    if CSVdataLogger_OPEN_FLAG == 1:
+        CSVdataLogger_Object.CreateGUIobjects(TkinterParent=Tab_CSVdataLogger)
+    #################################################
+    #################################################
+
+    #################################################
+    #################################################
+    if MyPrint_OPEN_FLAG == 1:
+        MyPrint_Object.CreateGUIobjects(TkinterParent=Tab_MyPrint)
+    #################################################
+    #################################################
 
     ################################################# THIS BLOCK MUST COME 2ND-TO-LAST IN def GUI_Thread() IF USING TABS.
+    #################################################
     root.protocol("WM_DELETE_WINDOW", ExitProgram_Callback)  # Set the calNmack function for when the window's closed.
     root.title("test_program_for_TorqueReaderNidecShimpoFG7000T_ReubenPython3Class")
     root.geometry('%dx%d+%d+%d' % (root_width, root_height, root_Xpos, root_Ypos)) # set the dimensions of the screen and where it is placed
     root.after(GUI_RootAfterCalNmackInterval_Milliseconds, GUI_update_clock)
     root.mainloop()
     #################################################
+    #################################################
 
     #################################################  THIS BLOCK MUST COME LAST IN def GUI_Thread() REGARDLESS OF CODE.
+    #################################################
     root.quit() #Stop the GUI thread, MUST BE CALLED FROM GUI_Thread
     root.destroy() #Close down the GUI thread, MUST BE CALLED FROM GUI_Thread
+    #################################################
     #################################################
 
 ##########################################################################################################
@@ -449,7 +502,13 @@ def ResetTare_Button_Response():
 
 ##########################################################################################################
 ##########################################################################################################
+##########################################################################################################
+##########################################################################################################
 if __name__ == '__main__':
+
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
 
     #################################################
     #################################################
@@ -494,6 +553,9 @@ if __name__ == '__main__':
 
     global USE_CSVdataLogger_FLAG
     USE_CSVdataLogger_FLAG = 1
+
+    global USE_KEYBOARD_FLAG
+    USE_KEYBOARD_FLAG = 1
     #################################################
     #################################################
 
@@ -628,12 +690,17 @@ if __name__ == '__main__':
         TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts.append(dict())
     #################################################
 
+    global TorqueReadingUnits_AcceptableValuesList
+    TorqueReadingUnits_AcceptableValuesList = ["N.m", "N.cm", "kgf.cm", "lbf.ft", "lbf.in"]
+
+    global TorqueReadingUnits_AcceptableValuesList_ListCounter
+    TorqueReadingUnits_AcceptableValuesList_ListCounter = 0
     #################################################
     #################################################
 
     #################################################
     #################################################
-    global MyPrint_ReubenPython2and3ClassObject
+    global MyPrint_Object
 
     global MyPrint_OPEN_FLAG
     MyPrint_OPEN_FLAG = -1
@@ -642,7 +709,7 @@ if __name__ == '__main__':
 
     #################################################
     #################################################
-    global CSVdataLogger_ReubenPython3ClassObject
+    global CSVdataLogger_Object
 
     global CSVdataLogger_OPEN_FLAG
     CSVdataLogger_OPEN_FLAG = -1
@@ -652,12 +719,15 @@ if __name__ == '__main__':
 
     global CSVdataLogger_MostRecentDict_Time
     CSVdataLogger_MostRecentDict_Time = -11111.0
+
+    global CSVdataLogger_MostRecentDict_IsSavingFlag
+    CSVdataLogger_MostRecentDict_IsSavingFlag = 0
     #################################################
     #################################################
 
     #################################################
     #################################################
-    global MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject
+    global MyPlotterPureTkinterStandAloneProcess_Object
 
     global MyPlotterPureTkinterStandAloneProcess_OPEN_FLAG
     MyPlotterPureTkinterStandAloneProcess_OPEN_FLAG = -1
@@ -665,78 +735,55 @@ if __name__ == '__main__':
     global MyPlotterPureTkinter_MostRecentDict
     MyPlotterPureTkinter_MostRecentDict = dict()
 
-    global MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_MostRecentDict_StandAlonePlottingProcess_ReadyForWritingFlag
-    MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_MostRecentDict_StandAlonePlottingProcess_ReadyForWritingFlag = -1
+    global MyPlotterPureTkinterStandAloneProcess_MostRecentDict_ReadyForWritingFlag
+    MyPlotterPureTkinterStandAloneProcess_MostRecentDict_ReadyForWritingFlag = -1
 
     global LastTime_MainLoopThread_MyPlotterPureTkinterStandAloneProcess
     LastTime_MainLoopThread_MyPlotterPureTkinterStandAloneProcess = -11111.0
     #################################################
     #################################################
 
-    #################################################  KEY GUI LINE
-    #################################################
-    if USE_GUI_FLAG == 1:
-        print("Starting GUI thread...")
-        GUI_Thread_ThreadingObject = threading.Thread(target=GUI_Thread)
-        GUI_Thread_ThreadingObject.setDaemon(True) #Should mean that the GUI thread is destroyed automatically when the main thread is destroyed.
-        GUI_Thread_ThreadingObject.start()
-        time.sleep(0.5)  #Allow enough time for 'root' to be created that we can then pass it into other classes.
-    else:
-        root = None
-        Tab_MainControls = None
-        Tab_TorqueReaderNidecShimpoFG7000T = None
-        Tab_MyPrint = None
-    #################################################
-    #################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
 
-    #################################################
-    #################################################
-    #################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
 
     #################################################
     #################################################
     for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
 
-        #################################################
         global TorqueReaderNidecShimpoFG7000T_GUIparametersDict
         TorqueReaderNidecShimpoFG7000T_GUIparametersDict = dict([("USE_GUI_FLAG", USE_GUI_FLAG and SHOW_IN_GUI_TorqueReaderNidecShimpoFG7000T_FLAG),
-                                        ("root", Tab_TorqueReaderNidecShimpoFG7000T),
-                                        ("EnableInternal_MyPrint_Flag", 0),
-                                        ("NumberOfPrintLines", 10),
-                                        ("UseBorderAroundThisGuiObjectFlag", 0),
-                                        ("GUI_ROW", GUI_ROW_TorqueReaderNidecShimpoFG7000T + Index),
-                                        ("GUI_COLUMN", GUI_COLUMN_TorqueReaderNidecShimpoFG7000T),
-                                        ("GUI_PADX", GUI_PADX_TorqueReaderNidecShimpoFG7000T),
-                                        ("GUI_PADY", GUI_PADY_TorqueReaderNidecShimpoFG7000T),
-                                        ("GUI_ROWSPAN", GUI_ROWSPAN_TorqueReaderNidecShimpoFG7000T),
-                                        ("GUI_COLUMNSPAN", GUI_COLUMNSPAN_TorqueReaderNidecShimpoFG7000T)])
-        #################################################
+                                                                ("EnableInternal_MyPrint_Flag", 0),
+                                                                ("NumberOfPrintLines", 10),
+                                                                ("UseBorderAroundThisGuiObjectFlag", 0),
+                                                                ("GUI_ROW", GUI_ROW_TorqueReaderNidecShimpoFG7000T + Index),
+                                                                ("GUI_COLUMN", GUI_COLUMN_TorqueReaderNidecShimpoFG7000T),
+                                                                ("GUI_PADX", GUI_PADX_TorqueReaderNidecShimpoFG7000T),
+                                                                ("GUI_PADY", GUI_PADY_TorqueReaderNidecShimpoFG7000T),
+                                                                ("GUI_ROWSPAN", GUI_ROWSPAN_TorqueReaderNidecShimpoFG7000T),
+                                                                ("GUI_COLUMNSPAN", GUI_COLUMNSPAN_TorqueReaderNidecShimpoFG7000T)])
 
-        #################################################
-        global TorqueReaderNidecShimpoFG7000T_setup_dict
-        TorqueReaderNidecShimpoFG7000T_setup_dict = dict([("GUIparametersDict", TorqueReaderNidecShimpoFG7000T_GUIparametersDict),
-                                                                                    ("DesiredSerialNumber_USBtoSerialConverter", TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index]),
-                                                                                    ("NameToDisplay_UserSet", "TorqueReaderNidecShimpoFG7000T: Sensor " + TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index]),
-                                                                                    ("DedicatedTxThread_TimeToSleepEachLoop", 0.002),
-                                                                                    ("DedicatedRxThread_TimeToSleepEachLoop", 0.002),
-                                                                                    ("TorqueDerivative_ExponentialSmoothingFilterLambda", 0.95)])
-        #################################################
+        global TorqueReaderNidecShimpoFG7000T_SetupDict
+        TorqueReaderNidecShimpoFG7000T_SetupDict = dict([("GUIparametersDict", TorqueReaderNidecShimpoFG7000T_GUIparametersDict),
+                                                        ("DesiredSerialNumber_USBtoSerialConverter", TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index]),
+                                                        ("NameToDisplay_UserSet", "TorqueReaderNidecShimpoFG7000T: Sensor " + TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index]),
+                                                        ("DedicatedTxThread_TimeToSleepEachLoop", 0.008),
+                                                        ("DedicatedRxThread_TimeToSleepEachLoop", 0.008),
+                                                        ("TorqueDerivative_ExponentialSmoothingFilterLambda", 0.95)])
 
-        #################################################
-        if USE_TorqueReaderNidecShimpoFG7000T_FLAG == 1:
+        if USE_TorqueReaderNidecShimpoFG7000T_FLAG == 1 and EXIT_PROGRAM_FLAG == 0:
             try:
-                TorqueReaderNidecShimpoFG7000T_ListOfObjects.append(TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(TorqueReaderNidecShimpoFG7000T_setup_dict))
+                TorqueReaderNidecShimpoFG7000T_ListOfObjects.append(TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(TorqueReaderNidecShimpoFG7000T_SetupDict))
                 TorqueReaderNidecShimpoFG7000T_OPEN_FLAG_ListOfFlags[Index] = TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].OBJECT_CREATED_SUCCESSFULLY_FLAG
 
             except:
                 exceptions = sys.exc_info()[0]
-                print("TorqueReaderNidecShimpoFG7000T_ReubenPython3ClassObject __init__ on SerialNumber" +
-                      TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index] +
-                      ", exceptions: %s" % exceptions)
-
+                print("TorqueReaderNidecShimpoFG7000T_ReubenPython3ClassObject __init__ on SerialNumber" + TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index] + ", exceptions: %s" % exceptions)
                 traceback.print_exc()
-        #################################################
-
     #################################################
     #################################################
 
@@ -752,231 +799,290 @@ if __name__ == '__main__':
 
     #################################################
     #################################################
-    #################################################
-
-    #################################################
-    #################################################
-    #################################################
-    global CSVdataLogger_ReubenPython3ClassObject_GUIparametersDict
-    CSVdataLogger_ReubenPython3ClassObject_GUIparametersDict = dict([("USE_GUI_FLAG", USE_GUI_FLAG and SHOW_IN_GUI_CSVdataLogger_FLAG),
-                                    ("root", Tab_CSVdataLogger),
-                                    ("EnableInternal_MyPrint_Flag", 1),
-                                    ("NumberOfPrintLines", 10),
-                                    ("UseBorderAroundThisGuiObjectFlag", 0),
-                                    ("GUI_ROW", GUI_ROW_CSVdataLogger),
-                                    ("GUI_COLUMN", GUI_COLUMN_CSVdataLogger),
-                                    ("GUI_PADX", GUI_PADX_CSVdataLogger),
-                                    ("GUI_PADY", GUI_PADY_CSVdataLogger),
-                                    ("GUI_ROWSPAN", GUI_ROWSPAN_CSVdataLogger),
-                                    ("GUI_COLUMNSPAN", GUI_COLUMNSPAN_CSVdataLogger)])
+    if USE_TorqueReaderNidecShimpoFG7000T_FLAG == 1:
+        if EXIT_PROGRAM_FLAG == 0:
+            if TorqueReaderNidecShimpoFG7000T_OPEN_FLAG != 1:
+                print("Failed to open TorqueReaderNidecShimpoFG7000T_Object.")
+                ExitProgram_Callback()
     #################################################
     #################################################
 
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+
     #################################################
-    CSVdataLogger_ReubenPython3ClassObject_setup_dict_VariableNamesForHeaderList = ["Time (S)",
-                                                                                    "SumOfTorquesFromAllSensors (Nm)"]
+    #################################################
+    global CSVdataLogger_GUIparametersDict
+    CSVdataLogger_GUIparametersDict = dict([("USE_GUI_FLAG", USE_GUI_FLAG and SHOW_IN_GUI_CSVdataLogger_FLAG),
+                                            ("EnableInternal_MyPrint_Flag", 1),
+                                            ("NumberOfPrintLines", 10),
+                                            ("UseBorderAroundThisGuiObjectFlag", 0),
+                                            ("GUI_ROW", GUI_ROW_CSVdataLogger),
+                                            ("GUI_COLUMN", GUI_COLUMN_CSVdataLogger),
+                                            ("GUI_PADX", GUI_PADX_CSVdataLogger),
+                                            ("GUI_PADY", GUI_PADY_CSVdataLogger),
+                                            ("GUI_ROWSPAN", GUI_ROWSPAN_CSVdataLogger),
+                                            ("GUI_COLUMNSPAN", GUI_COLUMNSPAN_CSVdataLogger)])
+
+    #################################################
+    CSVdataLogger_SetupDict_VariableNamesForHeaderList = ["Time (S)",
+                                                         "SumOfTorquesFromAllSensors (Nm)"]
     #################################################
 
     #################################################
     for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-        CSVdataLogger_ReubenPython3ClassObject_setup_dict_VariableNamesForHeaderList.append("Torque " + str(Index) + " (Nm)")
+        CSVdataLogger_SetupDict_VariableNamesForHeaderList.append("Torque " + str(Index) + " (Nm)")
     #################################################
 
     #################################################
-    CSVdataLogger_ReubenPython3ClassObject_setup_dict_VariableNamesForHeaderList.append("SumOfTorqueDerivativesFromAllSensors (Nm/s)")
+    CSVdataLogger_SetupDict_VariableNamesForHeaderList.append("SumOfTorqueDerivativesFromAllSensors (Nm/s)")
     #################################################
 
     #################################################
     for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-        CSVdataLogger_ReubenPython3ClassObject_setup_dict_VariableNamesForHeaderList.append("TorqueDerivative " + str(Index) + " (Nm/s)")
+        CSVdataLogger_SetupDict_VariableNamesForHeaderList.append("TorqueDerivative " + str(Index) + " (Nm/s)")
     #################################################
 
     #################################################
-    print("CSVdataLogger_ReubenPython3ClassObject_setup_dict_VariableNamesForHeaderList: " + str(CSVdataLogger_ReubenPython3ClassObject_setup_dict_VariableNamesForHeaderList))
+    print("CSVdataLogger_SetupDict_VariableNamesForHeaderList: " + str(CSVdataLogger_SetupDict_VariableNamesForHeaderList))
     #################################################
 
-    #################################################
-    #################################################
-    global CSVdataLogger_ReubenPython3ClassObject_setup_dict
-    CSVdataLogger_ReubenPython3ClassObject_setup_dict = dict([("GUIparametersDict", CSVdataLogger_ReubenPython3ClassObject_GUIparametersDict),
-                                                                                ("NameToDisplay_UserSet", "CSVdataLogger"),
-                                                                                ("CSVfile_DirectoryPath", os.getcwd() + "\\CSVfiles"),
-                                                                                ("FileNamePrefix", "CSV_file_"),
-                                                                                ("VariableNamesForHeaderList", CSVdataLogger_ReubenPython3ClassObject_setup_dict_VariableNamesForHeaderList),
-                                                                                ("MainThread_TimeToSleepEachLoop", 0.002),
-                                                                                ("SaveOnStartupFlag", 0)])
+    global CSVdataLogger_SetupDict
+    CSVdataLogger_SetupDict = dict([("GUIparametersDict", CSVdataLogger_GUIparametersDict),
+                                    ("NameToDisplay_UserSet", "CSVdataLogger"),
+                                    ("CSVfile_DirectoryPath", "C:\\CSVfiles"),
+                                    ("FileNamePrefix", "CSV_file_"),
+                                    ("VariableNamesForHeaderList", CSVdataLogger_SetupDict_VariableNamesForHeaderList),
+                                    ("MainThread_TimeToSleepEachLoop", 0.002),
+                                    ("SaveOnStartupFlag", 0)])
 
-    if USE_CSVdataLogger_FLAG == 1:
+    if USE_CSVdataLogger_FLAG == 1 and EXIT_PROGRAM_FLAG == 0:
         try:
-            CSVdataLogger_ReubenPython3ClassObject = CSVdataLogger_ReubenPython3Class(CSVdataLogger_ReubenPython3ClassObject_setup_dict)
-            CSVdataLogger_OPEN_FLAG = CSVdataLogger_ReubenPython3ClassObject.OBJECT_CREATED_SUCCESSFULLY_FLAG
+            CSVdataLogger_Object = CSVdataLogger_ReubenPython3Class(CSVdataLogger_SetupDict)
+            CSVdataLogger_OPEN_FLAG = CSVdataLogger_Object.OBJECT_CREATED_SUCCESSFULLY_FLAG
 
         except:
             exceptions = sys.exc_info()[0]
-            print("CSVdataLogger_ReubenPython3ClassObject __init__: Exceptions: %s" % exceptions)
+            print("CSVdataLogger_Object __init__: Exceptions: %s" % exceptions)
             traceback.print_exc()
     #################################################
+    #################################################
+
+    #################################################
+    #################################################
+    if USE_CSVdataLogger_FLAG == 1:
+        if EXIT_PROGRAM_FLAG == 0:
+            if CSVdataLogger_OPEN_FLAG != 1:
+                print("Failed to open CSVdataLogger_Object.")
+                ExitProgram_Callback()
+    #################################################
+    #################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+
+    #################################################
+    #################################################
+    global MyPrint_GUIparametersDict
+    MyPrint_GUIparametersDict = dict([("USE_GUI_FLAG", USE_GUI_FLAG and SHOW_IN_GUI_MyPrint_FLAG),
+                                        ("UseBorderAroundThisGuiObjectFlag", 0),
+                                        ("GUI_ROW", GUI_ROW_MyPrint),
+                                        ("GUI_COLUMN", GUI_COLUMN_MyPrint),
+                                        ("GUI_PADX", GUI_PADX_MyPrint),
+                                        ("GUI_PADY", GUI_PADY_MyPrint),
+                                        ("GUI_ROWSPAN", GUI_ROWSPAN_MyPrint),
+                                        ("GUI_COLUMNSPAN", GUI_COLUMNSPAN_MyPrint)])
+
+    global MyPrint_SetupDict
+    MyPrint_SetupDict = dict([("NumberOfPrintLines", 10),
+                            ("WidthOfPrintingLabel", 200),
+                            ("PrintToConsoleFlag", 1),
+                            ("LogFileNameFullPath", os.path.join(os.getcwd(), "TestLog.txt")),
+                            ("GUIparametersDict", MyPrint_GUIparametersDict)])
+
+    if USE_MyPrint_FLAG == 1 and EXIT_PROGRAM_FLAG == 0:
+        try:
+            MyPrint_Object = MyPrint_ReubenPython2and3Class(MyPrint_SetupDict)
+            MyPrint_OPEN_FLAG = MyPrint_Object.OBJECT_CREATED_SUCCESSFULLY_FLAG
+
+        except:
+            exceptions = sys.exc_info()[0]
+            print("MyPrint_Object __init__: Exceptions: %s" % exceptions)
+            traceback.print_exc()
     #################################################
     #################################################
 
     #################################################
     #################################################
     if USE_MyPrint_FLAG == 1:
+        if EXIT_PROGRAM_FLAG == 0:
+            if MyPrint_OPEN_FLAG != 1:
+                print("Failed to open MyPrint_Object.")
+                ExitProgram_Callback()
+    #################################################
+    #################################################
 
-        MyPrint_ReubenPython2and3ClassObject_GUIparametersDict = dict([("USE_GUI_FLAG", USE_GUI_FLAG and SHOW_IN_GUI_MyPrint_FLAG),
-                                                                        ("root", Tab_MyPrint),
-                                                                        ("UseBorderAroundThisGuiObjectFlag", 0),
-                                                                        ("GUI_ROW", GUI_ROW_MyPrint),
-                                                                        ("GUI_COLUMN", GUI_COLUMN_MyPrint),
-                                                                        ("GUI_PADX", GUI_PADX_MyPrint),
-                                                                        ("GUI_PADY", GUI_PADY_MyPrint),
-                                                                        ("GUI_ROWSPAN", GUI_ROWSPAN_MyPrint),
-                                                                        ("GUI_COLUMNSPAN", GUI_COLUMNSPAN_MyPrint)])
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
 
-        MyPrint_ReubenPython2and3ClassObject_setup_dict = dict([("NumberOfPrintLines", 10),
-                                                                ("WidthOfPrintingLabel", 200),
-                                                                ("PrintToConsoleFlag", 1),
-                                                                ("LogFileNameFullPath", os.getcwd() + "//TestLog.txt"),
-                                                                ("GUIparametersDict", MyPrint_ReubenPython2and3ClassObject_GUIparametersDict)])
+    #################################################
+    #################################################
+    global MyPlotterPureTkinterStandAloneProcess_NameList
+    MyPlotterPureTkinterStandAloneProcess_NameList = ["SumOfTorquesFromAllSensors_Nm", "SumOfTorqueDerivativesFromAllSensors_Nm", "Channel2", "Channel3", "Channel4", "Channel5"]
 
+    global MyPlotterPureTkinterStandAloneProcess_ColorList
+    MyPlotterPureTkinterStandAloneProcess_ColorList = ["Red", "Green", "Blue", "Black", "Purple", "Orange"]
+
+    global MyPlotterPureTkinterStandAloneProcess_GUIparametersDict
+    MyPlotterPureTkinterStandAloneProcess_GUIparametersDict = dict([("EnableInternal_MyPrint_Flag", 1),
+                                                                    ("NumberOfPrintLines", 10),
+                                                                    ("GraphCanvasWidth", 900),
+                                                                    ("GraphCanvasHeight", 700),
+                                                                    ("GraphCanvasWindowStartingX", 0),
+                                                                    ("GraphCanvasWindowStartingY", 0),
+                                                                    ("GraphCanvasWindowTitle", "My plotting example!"),
+                                                                    ("GUI_RootAfterCallbackInterval_Milliseconds_IndependentOfParentRootGUIloopEvents", 30)])
+
+    global MyPlotterPureTkinterStandAloneProcess_SetupDict
+    MyPlotterPureTkinterStandAloneProcess_SetupDict = dict([("GUIparametersDict", MyPlotterPureTkinterStandAloneProcess_GUIparametersDict),
+                                                            ("ParentPID", os.getpid()),
+                                                            ("WatchdogTimerDurationSeconds_ExpirationWillEndStandAlonePlottingProcess", 5.0),
+                                                            ("CurvesToPlotNamesAndColorsDictOfLists", dict([("NameList", MyPlotterPureTkinterStandAloneProcess_NameList),
+                                                                                                        ("MarkerSizeList", [2]*6),
+                                                                                                        ("LineWidthList", [2]*6),
+                                                                                                        ("IncludeInXaxisAutoscaleCalculationList", [1]*6),
+                                                                                                        ("IncludeInYaxisAutoscaleCalculationList", [1]*6),
+                                                                                                        ("ColorList", MyPlotterPureTkinterStandAloneProcess_ColorList)])),
+                                                            ("SmallTextSize", 7),
+                                                            ("LargeTextSize", 12),
+                                                            ("NumberOfDataPointToPlot", 100),
+                                                            ("XaxisNumberOfTickMarks", 10),
+                                                            ("YaxisNumberOfTickMarks", 10),
+                                                            ("XaxisNumberOfDecimalPlacesForLabels", 3),
+                                                            ("YaxisNumberOfDecimalPlacesForLabels", 3),
+                                                            ("XaxisAutoscaleFlag", 1),
+                                                            ("YaxisAutoscaleFlag", 1),
+                                                            ("X_min", 0.0),
+                                                            ("X_max", 5.0),
+                                                            ("Y_min", -5.0),
+                                                            ("Y_max", 5.0),
+                                                            ("XaxisDrawnAtBottomOfGraph", 0),
+                                                            ("XaxisLabelString", "Time (sec)"),
+                                                            ("YaxisLabelString", "Y-units (units)"),
+                                                            ("ShowLegendFlag", 1),
+                                                            ("GraphNumberOfLeadingZeros", 0),
+                                                            ("GraphNumberOfDecimalPlaces", 3),
+                                                            ("SavePlot_DirectoryPath", os.path.join(os.getcwd(), "SavedImagesFolder")),
+                                                            ("KeepPlotterWindowAlwaysOnTopFlag", 0),
+                                                            ("RemoveTitleBorderCloseButtonAndDisallowWindowMoveFlag", 0),
+                                                            ("AllowResizingOfWindowFlag", 1)])
+
+    if USE_MyPlotterPureTkinterStandAloneProcess_FLAG == 1 and EXIT_PROGRAM_FLAG == 0:
         try:
-            MyPrint_ReubenPython2and3ClassObject = MyPrint_ReubenPython2and3Class(MyPrint_ReubenPython2and3ClassObject_setup_dict)
-            MyPrint_OPEN_FLAG = MyPrint_ReubenPython2and3ClassObject.OBJECT_CREATED_SUCCESSFULLY_FLAG
+            MyPlotterPureTkinterStandAloneProcess_Object = MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3Class(MyPlotterPureTkinterStandAloneProcess_SetupDict)
+            MyPlotterPureTkinterStandAloneProcess_OPEN_FLAG = MyPlotterPureTkinterStandAloneProcess_Object.OBJECT_CREATED_SUCCESSFULLY_FLAG
 
         except:
             exceptions = sys.exc_info()[0]
-            print("MyPrint_ReubenPython2and3ClassObject __init__: Exceptions: %s" % exceptions)
+            print("MyPlotterPureTkinterStandAloneProcess_Object, exceptions: %s" % exceptions)
             traceback.print_exc()
     #################################################
     #################################################
 
     #################################################
     #################################################
-    global MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_NameList
-    MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_NameList = ["SumOfTorquesFromAllSensors_Nm", "SumOfTorqueDerivativesFromAllSensors_Nm", "Channel2", "Channel3", "Channel4", "Channel5"]
-
-    global MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_ColorList
-    MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_ColorList = ["Red", "Green", "Blue", "Black", "Purple", "Orange"]
-
-    global MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_GUIparametersDict
-    MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_GUIparametersDict = dict([("EnableInternal_MyPrint_Flag", 1),
-                                                                                                ("NumberOfPrintLines", 10),
-                                                                                                ("UseBorderAroundThisGuiObjectFlag", 0),
-                                                                                                ("GraphCanvasWidth", 890),
-                                                                                                ("GraphCanvasHeight", 700),
-                                                                                                ("GraphCanvasWindowStartingX", 0),
-                                                                                                ("GraphCanvasWindowStartingY", 0),
-                                                                                                ("GUI_RootAfterCalNmackInterval_Milliseconds_IndependentOfParentRootGUIloopEvents", 20)])
-
-    global MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_setup_dict
-    MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_setup_dict = dict([("GUIparametersDict", MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_GUIparametersDict),
-                                                                                        ("ParentPID", os.getpid()),
-                                                                                        ("WatchdogTimerExpirationDurationSeconds_StandAlonePlottingProcess", 0.0),
-                                                                                        ("MarkerSize", 3),
-                                                                                        ("CurvesToPlotNamesAndColorsDictOfLists",
-                                                                                            dict([("NameList", MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_NameList),
-                                                                                                  ("ColorList", MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_ColorList)])),
-                                                                                        ("NumberOfDataPointToPlot", 50),
-                                                                                        ("XaxisNumberOfTickMarks", 10),
-                                                                                        ("YaxisNumberOfTickMarks", 10),
-                                                                                        ("XaxisNumberOfDecimalPlacesForLabels", 3),
-                                                                                        ("YaxisNumberOfDecimalPlacesForLabels", 3),
-                                                                                        ("XaxisAutoscaleFlag", 1),
-                                                                                        ("YaxisAutoscaleFlag", 1),
-                                                                                        ("X_min", 0.0),
-                                                                                        ("X_max", 20.0),
-                                                                                        ("Y_min", -0.0015),
-                                                                                        ("Y_max", 0.0015),
-                                                                                        ("XaxisDrawnAtBottomOfGraph", 0),
-                                                                                        ("XaxisLabelString", "Time (sec)"),
-                                                                                        ("YaxisLabelString", "Y-units (units)"),
-                                                                                        ("ShowLegendFlag", 1)])
-
     if USE_MyPlotterPureTkinterStandAloneProcess_FLAG == 1:
-        try:
-            MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject = MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3Class(MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_setup_dict)
-            MyPlotterPureTkinterStandAloneProcess_OPEN_FLAG = MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject.OBJECT_CREATED_SUCCESSFULLY_FLAG
-
-        except:
-            exceptions = sys.exc_info()[0]
-            print("MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject, exceptions: %s" % exceptions)
-            traceback.print_exc()
+        if EXIT_PROGRAM_FLAG == 0:
+            if MyPlotterPureTkinterStandAloneProcess_OPEN_FLAG != 1:
+                print("Failed to open MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3Class.")
+                ExitProgram_Callback()
     #################################################
     #################################################
 
-    #################################################
-    #################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    if USE_KEYBOARD_FLAG == 1 and EXIT_PROGRAM_FLAG == 0:
+        keyboard.on_press_key("esc", ExitProgram_Callback)
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
 
-    #################################################
-    #################################################
-    if USE_TorqueReaderNidecShimpoFG7000T_FLAG == 1 and TorqueReaderNidecShimpoFG7000T_OPEN_FLAG != 1:
-        print("Failed to open TorqueReaderNidecShimpoFG7000T_ReubenPython3Class.")
-        TorqueReadingUnits_AcceptableValuesList = []
-        #ExitProgram_Callback()
+    ########################################################################################################## KEY GUI LINE
+    ##########################################################################################################
+    ##########################################################################################################
+    if USE_GUI_FLAG == 1 and EXIT_PROGRAM_FLAG == 0:
+        print("Starting GUI thread...")
+        GUI_Thread_ThreadingObject = threading.Thread(target=GUI_Thread, daemon=True) #Daemon=True means that the GUI thread is destroyed automatically when the main thread is destroyed
+        GUI_Thread_ThreadingObject.start()
     else:
-        TorqueReadingUnits_AcceptableValuesList = TorqueReaderNidecShimpoFG7000T_ListOfObjects[0].GetTorqueReadingUnitsAcceptableValuesList()
+        root = None
+        Tab_MainControls = None
+        Tab_TorqueReaderNidecShimpoFG7000T = None
+        Tab_MyPrint = None
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
 
-    print("TorqueReadingUnits_AcceptableValuesList: " + str(TorqueReadingUnits_AcceptableValuesList))
-    #################################################
-    #################################################
-
-    #################################################
-    #################################################
-    if USE_MyPrint_FLAG == 1 and MyPrint_OPEN_FLAG != 1:
-        print("Failed to open MyPrint_ReubenPython2and3ClassObject.")
-        #ExitProgram_Callback()
-    #################################################
-    #################################################
-
-    #################################################
-    #################################################
-    if USE_CSVdataLogger_FLAG == 1 and CSVdataLogger_OPEN_FLAG != 1:
-        print("Failed to open CSVdataLogger_ReubenPython3Class.")
-        #ExitProgram_Callback()
-    #################################################
-    #################################################
-
-    #################################################
-    #################################################
-    if USE_MyPlotterPureTkinterStandAloneProcess_FLAG == 1 and MyPlotterPureTkinterStandAloneProcess_OPEN_FLAG != 1:
-        print("Failed to open MyPlotterPureTkinterClass_Object.")
-        #ExitProgram_Callback()
-    #################################################
-    #################################################
-
-    #################################################
-    #################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
     LoopCounter = 0
     TorqueReadingUnits_AcceptableValuesList_ListCounter = 0
     print("Starting main loop 'test_program_for_TorqueReaderNidecShimpoFG7000T_ReubenPython3Class.")
     StartingTime_MainLoopThread = getPreciseSecondsTimeStampString()
-    while(EXIT_PROGRAM_FLAG == 0 or CSVdataLogger_ReubenPython3ClassObject.IsSaving() == 1):
+    while(EXIT_PROGRAM_FLAG == 0):
 
         try:
+            ###################################################
             ###################################################
             ###################################################
             CurrentTime_MainLoopThread = getPreciseSecondsTimeStampString() - StartingTime_MainLoopThread
             ###################################################
             ###################################################
+            ###################################################
 
             ################################################### GET's
+            ###################################################
             ###################################################
             if TorqueReaderNidecShimpoFG7000T_OPEN_FLAG == 1:
 
                 SumOfTorquesFromAllSensors_Nm = 0
                 SumOfTorqueDerivativesFromAllSensors_NmPerSec = 0
+
                 for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
                     TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index] = TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].GetMostRecentDataDict()
+                    #print("TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[ " + str(Index) + "]: " + str(TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]))
 
-                    if "Time" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index] and "MeasurementTorque_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]:
-                        SumOfTorquesFromAllSensors_Nm = SumOfTorquesFromAllSensors_Nm + TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorque_DictOfConvertedValues"]["N.m"]
-                        SumOfTorqueDerivativesFromAllSensors_NmPerSec = SumOfTorqueDerivativesFromAllSensors_NmPerSec + TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorqueDerivative_DictOfConvertedValues"]["N.m.PerSec"]
+                    try:
+                        if "MeasurementTorque_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index] and "MeasurementTorqueDerivative_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]:
+                            SumOfTorquesFromAllSensors_Nm = SumOfTorquesFromAllSensors_Nm + TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorque_DictOfConvertedValues"]["N.m"]
+                            SumOfTorqueDerivativesFromAllSensors_NmPerSec = SumOfTorqueDerivativesFromAllSensors_NmPerSec + TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorqueDerivative_DictOfConvertedValues"]["N.m.PerSec"]
 
-                #print("SumOfTorquesFromAllSensors_Nm: " + str(SumOfTorquesFromAllSensors_Nm) + ", SumOfTorqueDerivativesFromAllSensors_NmPerSec: " + str(SumOfTorqueDerivativesFromAllSensors_NmPerSec))
+                            #print("SumOfTorquesFromAllSensors_Nm: " + str(SumOfTorquesFromAllSensors_Nm) + ", SumOfTorqueDerivativesFromAllSensors_NmPerSec: " + str(SumOfTorqueDerivativesFromAllSensors_NmPerSec))
+                    except:
+                        pass
+            ###################################################
             ###################################################
             ###################################################
 
             ################################################### SET's
+            ###################################################
             ###################################################
             if TorqueReaderNidecShimpoFG7000T_OPEN_FLAG == 1:
 
@@ -1014,6 +1120,7 @@ if __name__ == '__main__':
 
             ###################################################
             ###################################################
+            ###################################################
 
             #################################################### SET's
             ####################################################
@@ -1028,40 +1135,47 @@ if __name__ == '__main__':
 
                 ####################################################
                 for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-                    if "Time" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index] and "MeasurementTorque_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]:
-                        ListToWrite.append(TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorque_DictOfConvertedValues"]["N.m"])
+                    try:
+                        if "MeasurementTorque_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]:
+                            ListToWrite.append(TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorque_DictOfConvertedValues"]["N.m"])
+                    except:
+                        pass
                 ####################################################
 
                 ListToWrite.append(SumOfTorqueDerivativesFromAllSensors_NmPerSec)
 
                 ####################################################
                 for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-                    if "Time" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index] and "MeasurementTorque_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]:
-                        ListToWrite.append(TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorqueDerivative_DictOfConvertedValues"]["N.m.PerSec"])
+                    try:
+                        if "MeasurementTorque_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]:
+                            ListToWrite.append(TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorqueDerivative_DictOfConvertedValues"]["N.m.PerSec"])
+                    except:
+                        pass
                 ####################################################
 
                 ####################################################
                 ####################################################
 
-                CSVdataLogger_ReubenPython3ClassObject.AddDataToCSVfile_ExternalFunctionCall(ListToWrite)
+                CSVdataLogger_Object.AddDataToCSVfile_ExternalFunctionCall(ListToWrite)
             ####################################################
             ####################################################
             ####################################################
 
             #################################################### SET's
             ####################################################
+            ###################################################
             if MyPlotterPureTkinterStandAloneProcess_OPEN_FLAG == 1:
 
                 ####################################################
-                MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_MostRecentDict = MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject.GetMostRecentDataDict()
+                MyPlotterPureTkinterStandAloneProcess_MostRecentDict = MyPlotterPureTkinterStandAloneProcess_Object.GetMostRecentDataDict()
 
-                if "StandAlonePlottingProcess_ReadyForWritingFlag" in MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_MostRecentDict:
-                    MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_MostRecentDict_StandAlonePlottingProcess_ReadyForWritingFlag = MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_MostRecentDict["StandAlonePlottingProcess_ReadyForWritingFlag"]
+                if "StandAlonePlottingProcess_ReadyForWritingFlag" in MyPlotterPureTkinterStandAloneProcess_MostRecentDict:
+                    MyPlotterPureTkinterStandAloneProcess_MostRecentDict_ReadyForWritingFlag = MyPlotterPureTkinterStandAloneProcess_MostRecentDict["StandAlonePlottingProcess_ReadyForWritingFlag"]
 
-                    if MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_MostRecentDict_StandAlonePlottingProcess_ReadyForWritingFlag == 1:
-                        if CurrentTime_MainLoopThread - LastTime_MainLoopThread_MyPlotterPureTkinterStandAloneProcess >= 0.030:
+                    if MyPlotterPureTkinterStandAloneProcess_MostRecentDict_ReadyForWritingFlag == 1:
+                        if CurrentTime_MainLoopThread - LastTime_MainLoopThread_MyPlotterPureTkinterStandAloneProcess >= MyPlotterPureTkinterStandAloneProcess_GUIparametersDict["GUI_RootAfterCallbackInterval_Milliseconds_IndependentOfParentRootGUIloopEvents"]/1000.0 + 0.001:
 
-                            MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject.ExternalAddPointOrListOfPointsToPlot(MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject_NameList[0:2],
+                            MyPlotterPureTkinterStandAloneProcess_Object.ExternalAddPointOrListOfPointsToPlot(MyPlotterPureTkinterStandAloneProcess_NameList[0:2],
                                                                                                             [CurrentTime_MainLoopThread]*2,
                                                                                                             [SumOfTorquesFromAllSensors_Nm, SumOfTorqueDerivativesFromAllSensors_NmPerSec])
 
@@ -1071,19 +1185,22 @@ if __name__ == '__main__':
 
             ####################################################
             ####################################################
+            ###################################################
 
-            time.sleep(0.001)
+            time.sleep(1.0/90.0)
 
         except:
             exceptions = sys.exc_info()[0]
             print("test_program_for_TorqueReaderNidecShimpoFG7000T_ReubenPython3Class, exceptions: %s" % exceptions)
             traceback.print_exc()
 
-    #################################################
-    #################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
 
-    ################################################# THIS IS THE EXIT ROUTINE!
-    #################################################
+    ########################################################################################################## THIS IS THE EXIT ROUTINE!
+    ##########################################################################################################
+    ##########################################################################################################
     print("Exiting main program 'test_program_for_TorqueReaderNidecShimpoFG7000T_ReubenPython3Class.")
 
     #################################################
@@ -1094,21 +1211,24 @@ if __name__ == '__main__':
 
     #################################################
     if MyPrint_OPEN_FLAG == 1:
-        MyPrint_ReubenPython2and3ClassObject.ExitProgram_Callback()
+        MyPrint_Object.ExitProgram_Callback()
     #################################################
 
     #################################################
     if CSVdataLogger_OPEN_FLAG == 1:
-        CSVdataLogger_ReubenPython3ClassObject.ExitProgram_Callback()
+        CSVdataLogger_Object.ExitProgram_Callback()
     #################################################
 
     #################################################
     if MyPlotterPureTkinterStandAloneProcess_OPEN_FLAG == 1:
-        MyPlotterPureTkinterStandAloneProcess_ReubenPython2and3ClassObject.ExitProgram_Callback()
+        MyPlotterPureTkinterStandAloneProcess_Object.ExitProgram_Callback()
     #################################################
 
-    #################################################
-    #################################################
+    ##########################################################################################################
+    ##########################################################################################################
+    ##########################################################################################################
 
+##########################################################################################################
+##########################################################################################################
 ##########################################################################################################
 ##########################################################################################################

@@ -6,12 +6,20 @@ reuben.brewer@gmail.com
 www.reubotics.com
 
 Apache 2 License
-Software Revision D, 11/13/2024
+Software Revision E, 01/05/2026
 
-Verified working on: Python 3.11 for Windows 10/11 64-bit and Raspberry Pi Buster (may work on Mac in non-GUI mode, but haven't tested yet).
+Verified working on: Python 3.11/12/13 for Windows 10/11 64-bit and Raspberry Pi Bookworm (may work on Mac in non-GUI mode, but haven't tested yet).
 '''
 
 __author__ = 'reuben.brewer'
+
+##########################################################################################################
+##########################################################################################################
+
+##########################################
+import ReubenGithubCodeModulePaths #Replaces the need to have "ReubenGithubCodeModulePaths.pth" within "C:\Anaconda3\Lib\site-packages".
+ReubenGithubCodeModulePaths.Enable()
+##########################################
 
 ##########################################
 from LowPassFilterForDictsOfLists_ReubenPython2and3Class import *
@@ -29,6 +37,7 @@ from copy import * #for deepcopy
 import inspect #To enable 'TellWhichFileWereIn'
 import threading
 import traceback
+import queue as Queue
 ##########################################
 
 ##########################################
@@ -38,14 +47,6 @@ from tkinter import ttk
 ##########################################
 
 ##########################################
-import queue as Queue
-##########################################
-
-##########################################
-from future.builtins import input as input
-########################################## "sudo pip3 install future" (Python 3) AND "sudo pip install future" (Python 2)
-
-##########################################
 import platform
 if platform.system() == "Windows":
     import ctypes
@@ -53,14 +54,12 @@ if platform.system() == "Windows":
     winmm.timeBeginPeriod(1) #Set minimum timer resolution to 1ms so that time.sleep(0.001) behaves properly.
 ##########################################
 
-#########################################################
-
-##########################
+##########################################
 import serial #___IMPORTANT: pip install pyserial (NOT pip install serial).
 from serial.tools import list_ports
-##########################
+##########################################
 
-##########################
+##########################################
 global ftd2xx_IMPORTED_FLAG
 ftd2xx_IMPORTED_FLAG = 0
 try:
@@ -72,15 +71,16 @@ except:
     print("**********")
     print("********** TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: ERROR, failed to import ftdtxx, Exceptions: %s" % exceptions + " ********** ")
     print("**********")
-##########################
+##########################################
 
-#########################################################
+##########################################################################################################
+##########################################################################################################
 
 class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tkinter Frame
 
     ##########################################################################################################
     ##########################################################################################################
-    def __init__(self, setup_dict): #Subclass the Tkinter Frame
+    def __init__(self, SetupDict): #Subclass the Tkinter Frame
 
         print("#################### TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__ starting. ####################")
 
@@ -163,6 +163,8 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
         self.ToggleUnits_EventNeedsToBeFiredFlag = 0
         self.ToggleUnits_EventCounter = 0
 
+        self.FlushSerial_EventNeedsToBeFiredFlag = 0
+
         self.MostRecentDataDict = dict()
         #########################################################
         #########################################################
@@ -191,8 +193,8 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #########################################################
-        if "GUIparametersDict" in setup_dict:
-            self.GUIparametersDict = setup_dict["GUIparametersDict"]
+        if "GUIparametersDict" in SetupDict:
+            self.GUIparametersDict = SetupDict["GUIparametersDict"]
 
             #########################################################
             #########################################################
@@ -202,16 +204,6 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                 self.USE_GUI_FLAG = 0
 
             print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: USE_GUI_FLAG: " + str(self.USE_GUI_FLAG))
-            #########################################################
-            #########################################################
-
-            #########################################################
-            #########################################################
-            if "root" in self.GUIparametersDict:
-                self.root = self.GUIparametersDict["root"]
-            else:
-                print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: ERROR, must pass in 'root'")
-                return
             #########################################################
             #########################################################
 
@@ -346,8 +338,8 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #########################################################
-        if "DesiredSerialNumber_USBtoSerialConverter" in setup_dict:
-            self.DesiredSerialNumber_USBtoSerialConverter = setup_dict["DesiredSerialNumber_USBtoSerialConverter"]
+        if "DesiredSerialNumber_USBtoSerialConverter" in SetupDict:
+            self.DesiredSerialNumber_USBtoSerialConverter = SetupDict["DesiredSerialNumber_USBtoSerialConverter"]
 
         else:
             print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: ERROR, must initialize object with 'DesiredSerialNumber_USBtoSerialConverter' argument.")
@@ -359,8 +351,8 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #########################################################
-        if "NameToDisplay_UserSet" in setup_dict:
-            self.NameToDisplay_UserSet = str(setup_dict["NameToDisplay_UserSet"])
+        if "NameToDisplay_UserSet" in SetupDict:
+            self.NameToDisplay_UserSet = str(SetupDict["NameToDisplay_UserSet"])
         else:
             self.NameToDisplay_UserSet = ""
 
@@ -370,7 +362,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #########################################################
-        self.UpdateSetupDictParameters(setup_dict)
+        self.UpdateSetupDictParameters(SetupDict)
         #########################################################
         #########################################################
 
@@ -379,19 +371,19 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #new_filtered_value = k * raw_sensor_value + (1 - k) * old_filtered_value
-        self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject_DictOfVariableFilterSettings = dict([("DataStreamingFrequency_CalculatedFromDedicatedTxThread", dict([("UseMedianFilterFlag", 1), ("UseExponentialSmoothingFilterFlag", 1), ("ExponentialSmoothingFilterLambda", 0.05)])),
-                                                                                                            ("DataStreamingFrequency_CalculatedFromDedicatedRxThread", dict([("UseMedianFilterFlag", 1), ("UseExponentialSmoothingFilterFlag", 1), ("ExponentialSmoothingFilterLambda", 0.05)])),
-                                                                                                             ("TorqueDerivative", dict([("UseMedianFilterFlag", 1), ("UseExponentialSmoothingFilterFlag", 1),("ExponentialSmoothingFilterLambda", self.TorqueDerivative_ExponentialSmoothingFilterLambda)]))])
+        self.LowPassFilterForDictsOfLists_DictOfVariableFilterSettings = dict([("DataStreamingFrequency_CalculatedFromDedicatedTxThread", dict([("UseMedianFilterFlag", 0), ("UseExponentialSmoothingFilterFlag", 1), ("ExponentialSmoothingFilterLambda", 0.05)])),
+                                                                            ("DataStreamingFrequency_CalculatedFromDedicatedRxThread", dict([("UseMedianFilterFlag", 0), ("UseExponentialSmoothingFilterFlag", 1), ("ExponentialSmoothingFilterLambda", 0.05)])),
+                                                                            ("TorqueDerivative", dict([("UseMedianFilterFlag", 0), ("UseExponentialSmoothingFilterFlag", 1),("ExponentialSmoothingFilterLambda", self.TorqueDerivative_ExponentialSmoothingFilterLambda)]))])
 
-        self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject_setup_dict = dict([("DictOfVariableFilterSettings", self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject_DictOfVariableFilterSettings)])
+        self.LowPassFilterForDictsOfLists_SetupDict = dict([("DictOfVariableFilterSettings", self.LowPassFilterForDictsOfLists_DictOfVariableFilterSettings)])
 
-        self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject = LowPassFilterForDictsOfLists_ReubenPython2and3Class(self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject_setup_dict)
-        self.LOWPASSFILTER_OPEN_FLAG = self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject.OBJECT_CREATED_SUCCESSFULLY_FLAG
+        self.LowPassFilterForDictsOfLists_Object = LowPassFilterForDictsOfLists_ReubenPython2and3Class(self.LowPassFilterForDictsOfLists_SetupDict)
+        self.LowPassFilterForDictsOfLists_OPEN_FLAG = self.LowPassFilterForDictsOfLists_Object.OBJECT_CREATED_SUCCESSFULLY_FLAG
         #########################################################
 
         #########################################################
-        if self.LOWPASSFILTER_OPEN_FLAG != 1:
-            print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: Failed to open LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject.")
+        if self.LowPassFilterForDictsOfLists_OPEN_FLAG != 1:
+            print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class __init__: Failed to open LowPassFilterForDictsOfLists_Object.")
             return
         #########################################################
 
@@ -448,19 +440,6 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #########################################################
-        if self.USE_GUI_FLAG == 1:
-            self.StartGUI(self.root)
-        #########################################################
-        #########################################################
-
-        #########################################################
-        #########################################################
-        time.sleep(0.25)
-        #########################################################
-        #########################################################
-
-        #########################################################
-        #########################################################
         self.OBJECT_CREATED_SUCCESSFULLY_FLAG = 1
         #########################################################
         #########################################################
@@ -470,19 +449,12 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
     ##########################################################################################################
     ##########################################################################################################
-    def __del__(self):
-        pass
-    ##########################################################################################################
-    ##########################################################################################################
-
-    ##########################################################################################################
-    ##########################################################################################################
-    def UpdateSetupDictParameters(self, setup_dict):
+    def UpdateSetupDictParameters(self, SetupDict):
 
         #########################################################
         #########################################################
-        if "SamplesPerSecond" in setup_dict:
-            SamplesPerSecond_TEMP = int(self.PassThroughFloatValuesInRange_ExitProgramOtherwise("SamplesPerSecond", setup_dict["SamplesPerSecond"], 0.0, 250.0))
+        if "SamplesPerSecond" in SetupDict:
+            SamplesPerSecond_TEMP = int(self.PassThroughFloatValuesInRange_ExitProgramOtherwise("SamplesPerSecond", SetupDict["SamplesPerSecond"], 0.0, 250.0))
 
             if SamplesPerSecond_TEMP not in self.SamplesPerSecond_AcceptableValuesList:
                 self.SamplesPerSecond = 250 #fastest
@@ -502,8 +474,8 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #########################################################
-        if "DedicatedTxThread_TimeToSleepEachLoop" in setup_dict:
-            self.DedicatedTxThread_TimeToSleepEachLoop = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("DedicatedTxThread_TimeToSleepEachLoop", setup_dict["DedicatedTxThread_TimeToSleepEachLoop"], 0.001, 100000)
+        if "DedicatedTxThread_TimeToSleepEachLoop" in SetupDict:
+            self.DedicatedTxThread_TimeToSleepEachLoop = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("DedicatedTxThread_TimeToSleepEachLoop", SetupDict["DedicatedTxThread_TimeToSleepEachLoop"], 0.001, 100000)
 
         else:
             self.DedicatedTxThread_TimeToSleepEachLoop = 0.005
@@ -514,8 +486,8 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #########################################################
-        if "DedicatedRxThread_TimeToSleepEachLoop" in setup_dict:
-            self.DedicatedRxThread_TimeToSleepEachLoop = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("DedicatedRxThread_TimeToSleepEachLoop", setup_dict["DedicatedRxThread_TimeToSleepEachLoop"], 0.001, 100000)
+        if "DedicatedRxThread_TimeToSleepEachLoop" in SetupDict:
+            self.DedicatedRxThread_TimeToSleepEachLoop = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("DedicatedRxThread_TimeToSleepEachLoop", SetupDict["DedicatedRxThread_TimeToSleepEachLoop"], 0.001, 100000)
 
         else:
             self.DedicatedRxThread_TimeToSleepEachLoop = 0.005
@@ -526,8 +498,8 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #########################################################
         #########################################################
-        if "TorqueDerivative_ExponentialSmoothingFilterLambda" in setup_dict:
-            self.TorqueDerivative_ExponentialSmoothingFilterLambda = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("TorqueDerivative_ExponentialSmoothingFilterLambda", setup_dict["TorqueDerivative_ExponentialSmoothingFilterLambda"], 0.0, 1.0)
+        if "TorqueDerivative_ExponentialSmoothingFilterLambda" in SetupDict:
+            self.TorqueDerivative_ExponentialSmoothingFilterLambda = self.PassThroughFloatValuesInRange_ExitProgramOtherwise("TorqueDerivative_ExponentialSmoothingFilterLambda", SetupDict["TorqueDerivative_ExponentialSmoothingFilterLambda"], 0.0, 1.0)
 
         else:
             self.TorqueDerivative_ExponentialSmoothingFilterLambda = 0.95 #new_filtered_value = k * raw_sensor_value + (1 - k) * old_filtered_value
@@ -913,7 +885,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
             if self.DataStreamingDeltaT_CalculatedFromDedicatedTxThread != 0.0:
                 DataStreamingFrequency_CalculatedFromDedicatedTxThread_TEMP = 1.0/self.DataStreamingDeltaT_CalculatedFromDedicatedTxThread
 
-                ResultsDict = self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject.AddDataDictFromExternalProgram(dict([("DataStreamingFrequency_CalculatedFromDedicatedTxThread", DataStreamingFrequency_CalculatedFromDedicatedTxThread_TEMP)]))
+                ResultsDict = self.LowPassFilterForDictsOfLists_Object.AddDataDictFromExternalProgram(dict([("DataStreamingFrequency_CalculatedFromDedicatedTxThread", DataStreamingFrequency_CalculatedFromDedicatedTxThread_TEMP)]))
                 self.DataStreamingFrequency_CalculatedFromDedicatedTxThread = ResultsDict["DataStreamingFrequency_CalculatedFromDedicatedTxThread"]["Filtered_MostRecentValuesList"][0]
 
             self.LastTime_CalculatedFromDedicatedTxThread = self.CurrentTime_CalculatedFromDedicatedTxThread
@@ -934,7 +906,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
             if self.DataStreamingDeltaT_CalculatedFromDedicatedRxThread != 0.0:
                 DataStreamingFrequency_CalculatedFromDedicatedRxThread_TEMP = 1.0/self.DataStreamingDeltaT_CalculatedFromDedicatedRxThread
 
-                ResultsDict = self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject.AddDataDictFromExternalProgram(dict([("DataStreamingFrequency_CalculatedFromDedicatedRxThread", DataStreamingFrequency_CalculatedFromDedicatedRxThread_TEMP)]))
+                ResultsDict = self.LowPassFilterForDictsOfLists_Object.AddDataDictFromExternalProgram(dict([("DataStreamingFrequency_CalculatedFromDedicatedRxThread", DataStreamingFrequency_CalculatedFromDedicatedRxThread_TEMP)]))
                 self.DataStreamingFrequency_CalculatedFromDedicatedRxThread = ResultsDict["DataStreamingFrequency_CalculatedFromDedicatedRxThread"]["Filtered_MostRecentValuesList"][0]
 
             self.LastTime_CalculatedFromDedicatedRxThread = self.CurrentTime_CalculatedFromDedicatedRxThread
@@ -958,7 +930,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
             if self.DataStreamingDeltaT_CalculateMeasurementTorqueDerivative != 0.0:
                 MeasurementTorqueDerivative_NmPerSec_raw = (self.CurrentMeasurementTorque_Nm - self.LastMeasurementTorque_Nm)/self.DataStreamingDeltaT_CalculateMeasurementTorqueDerivative
 
-                ResultsDict = self.LowPassFilterForDictsOfLists_ReubenPython2and3ClassObject.AddDataDictFromExternalProgram(dict([("TorqueDerivative", MeasurementTorqueDerivative_NmPerSec_raw)]))
+                ResultsDict = self.LowPassFilterForDictsOfLists_Object.AddDataDictFromExternalProgram(dict([("TorqueDerivative", MeasurementTorqueDerivative_NmPerSec_raw)]))
                 MeasurementTorqueDerivative_NmPerSec_filtered = ResultsDict["TorqueDerivative"]["Filtered_MostRecentValuesList"][0]
 
                 MeasurementTorqueDerivative_DictOfConvertedValues = self.ConvertTorqueToAllUnits(MeasurementTorqueDerivative_NmPerSec_filtered, "N.m", TorquePerSecondFlag=1)
@@ -1296,6 +1268,32 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
     ##########################################################################################################
     ##########################################################################################################
+    def FlushSerial(self, PrintDebugFlag=1):
+
+        if self.SerialConnectedFlag == 1:
+            try:
+
+                ##########################################################################################################
+                self.SerialObject.reset_input_buffer()
+                ##########################################################################################################
+
+                if PrintDebugFlag == 1:
+                    print("FlushSerial event fired!")
+
+                return 1
+
+            except:
+                exceptions = sys.exc_info()[0]
+                print("FlushSerial, exceptions: %s" % exceptions)
+
+        else:
+            print("FlushSerial: Error, SerialConnectedFlag = 0, cannot issue command.")
+            return 0
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
     def ConvertTorqueToAllUnits(self, InputValue, InputUnits, TorquePerSecondFlag = 0):
 
         try:
@@ -1375,13 +1373,24 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
             exceptions = sys.exc_info()[0]
             self.MyPrint_WithoutLogFile("ConvertTorqueToAllUnits InputValue: " + str(InputValue) + ", InputUnits: " + str(InputUnits) + ", exceptions: %s" % exceptions)
 
-            return dict([("N.m", ConvertedValue_Nm),
-                                        ("N.cm", ConvertedValue_Ncm),
-                                        ("N.mm", ConvertedValue_Nmm),
-                                        ("kgf.cm", ConvertedValue_KGFcm),
-                                        ("kgf.m", ConvertedValue_KGFm),
-                                        ("lbf.ft", ConvertedValue_LBFft),
-                                        ("lbf.in", ConvertedValue_LBFin)])
+            if TorquePerSecondFlag == 0:
+
+                return dict([("N.m", ConvertedValue_Nm),
+                            ("N.cm", ConvertedValue_Ncm),
+                            ("N.mm", ConvertedValue_Nmm),
+                            ("kgf.cm", ConvertedValue_KGFcm),
+                            ("kgf.m", ConvertedValue_KGFm),
+                            ("lbf.ft", ConvertedValue_LBFft),
+                            ("lbf.in", ConvertedValue_LBFin)])
+
+            else:
+                return dict([("N.m.PerSec", ConvertedValue_Nm),
+                            ("N.cm.PerSec", ConvertedValue_Ncm),
+                            ("N.mm.PerSec", ConvertedValue_Nmm),
+                            ("kgf.cm.PerSec", ConvertedValue_KGFcm),
+                            ("kgf.m.PerSec", ConvertedValue_KGFm),
+                            ("lbf.ft.PerSec", ConvertedValue_LBFft),
+                            ("lbf.in.PerSec", ConvertedValue_LBFin)])
 
             #traceback.print_exc()
 
@@ -1464,6 +1473,12 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                 if self.ResetTare_EventNeedsToBeFiredFlag == 1:
                     self.ResetTare()
                     self.ResetTare_EventNeedsToBeFiredFlag = 0
+                ##########################################################################################################
+
+                ##########################################################################################################
+                if self.FlushSerial_EventNeedsToBeFiredFlag == 1:
+                    self.FlushSerial(PrintDebugFlag=1)
+                    self.FlushSerial_EventNeedsToBeFiredFlag = 0
                 ##########################################################################################################
 
                 ##########################################################################################################
@@ -1579,12 +1594,17 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
                     try:
 
+                        ##########################################
+                        self.UpdateFrequencyCalculation_DedicatedRxThread_Filtered()
+                        ##########################################
+
+                        ##########################################
                         self.MostRecentDataDict["Time"] = self.CurrentTime_CalculatedFromDedicatedRxThread
                         self.MostRecentDataDict["MostRecentMessage_Raw"] = RxMessageString
                         self.MostRecentDataDict["MostRecentMessage_SplitIntoList"] = RxMessageStringList
                         self.MostRecentDataDict["MostRecentMessage_LengthOfSplitIntoList"] = len(RxMessageStringList)
-
-
+                        ##########################################
+                        
                         ##########################################
                         MeasurementTorque = RxMessageStringList[0]
                         MeasurementUnits = RxMessageStringList[1]
@@ -1600,6 +1620,7 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                         self.MostRecentDataDict["MeasurementTorqueDerivative_DictOfConvertedValues"] = self.CalculateMeasurementTorqueDerivative()
 
                         self.MostRecentDataDict["DataStreamingFrequency_CalculatedFromDedicatedRxThread"] = self.DataStreamingFrequency_CalculatedFromDedicatedRxThread
+                        self.MostRecentDataDict["DataStreamingFrequency_CalculatedFromDedicatedTxThread"] = self.DataStreamingFrequency_CalculatedFromDedicatedTxThread
 
                         self.MostRecentDataDict["ResetPeak_EventHasHappenedFlag"] = self.ResetPeak_EventHasHappenedFlag
                         self.MostRecentDataDict["ResetTare_EventHasHappenedFlag"] = self.ResetTare_EventHasHappenedFlag
@@ -1614,6 +1635,16 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
                         exceptions = sys.exc_info()[0]
                         print("DedicatedRxThread, message receiving section, Exceptions: %s" % exceptions)
                         #traceback.print_exc()
+                ##########################################################################################################
+                ##########################################################################################################
+
+                ##########################################################################################################
+                ##########################################################################################################
+                if self.DedicatedRxThread_TimeToSleepEachLoop > 0.0:
+                    if self.DedicatedRxThread_TimeToSleepEachLoop > 0.001:
+                        time.sleep(self.DedicatedRxThread_TimeToSleepEachLoop - 0.001) #The "- 0.001" corrects for slight deviation from intended frequency due to other functions being called.
+                    else:
+                        time.sleep(self.DedicatedRxThread_TimeToSleepEachLoop)
                 ##########################################################################################################
                 ##########################################################################################################
 
@@ -1652,22 +1683,14 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
     ##########################################################################################################
     ##########################################################################################################
-    def StartGUI(self, GuiParent):
+    def CreateGUIobjects(self, TkinterParent):
 
-        self.GUI_Thread(GuiParent)
-    ##########################################################################################################
-    ##########################################################################################################
-
-    ##########################################################################################################
-    ##########################################################################################################
-    def GUI_Thread(self, parent):
-
-        print("Starting the GUI_Thread for TorqueReaderNidecShimpoFG7000T_ReubenPython3Class object.")
+        print("TorqueReaderNidecShimpoFG7000T_ReubenPython3Class, CreateGUIobjects event fired.")
 
         #################################################
         #################################################
-        self.root = parent
-        self.parent = parent
+        self.root = TkinterParent
+        self.parent = TkinterParent
         #################################################
         #################################################
 
@@ -1754,6 +1777,13 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
 
         #################################################
         #################################################
+        self.FlushSerial_Button = Button(self.ButtonsFrame, text="Flush Serial", state="normal", width=20, command=lambda: self.FlushSerial_Button_Response())
+        self.FlushSerial_Button.grid(row=3, column=0, padx=10, pady=10, columnspan=1, rowspan=1)
+        #################################################
+        #################################################
+
+        #################################################
+        #################################################
         self.PrintToGui_Label = Label(self.myFrame, text="PrintToGui_Label", width=75)
         if self.EnableInternal_MyPrint_Flag == 1:
             self.PrintToGui_Label.grid(row=2, column=0, padx=self.GUI_PADX, pady=self.GUI_PADY, columnspan=10, rowspan=10)
@@ -1829,6 +1859,17 @@ class TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(Frame): #Subclass the Tk
         self.ToggleUnits_EventNeedsToBeFiredFlag = 1
 
         #self.MyPrint_WithoutLogFile("ToggleUnits_Button_Response: Event fired!")
+
+    ##########################################################################################################
+    ##########################################################################################################
+
+    ##########################################################################################################
+    ##########################################################################################################
+    def FlushSerial_Button_Response(self):
+
+        self.FlushSerial_EventNeedsToBeFiredFlag = 1
+
+        #self.MyPrint_WithoutLogFile("FlushSerial_Button_Response: Event fired!")
 
     ##########################################################################################################
     ##########################################################################################################

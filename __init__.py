@@ -6,7 +6,7 @@ reuben.brewer@gmail.com
 www.reubotics.com
 
 Apache 2 License
-Software Revision E, 01/05/2026
+Software Revision F, 01/09/2026
 
 Verified working on: Python 3.11/12/13 for Windows 10/11 64-bit and Raspberry Pi Bookworm (may work on Mac in non-GUI mode, but haven't tested yet).
 '''
@@ -16,7 +16,7 @@ Verified working on: Python 3.11/12/13 for Windows 10/11 64-bit and Raspberry Pi
 #######################################################################################################################
 #######################################################################################################################
 __author__ = 'reuben.brewer'
-__version__ = "Software Revision E, 01/05/2026"
+__version__ = "Software Revision F, 01/09/2026"
 
 from .TorqueReaderNidecShimpoFG7000T_ReubenPython3Class import TorqueReaderNidecShimpoFG7000T_ReubenPython3Class
 

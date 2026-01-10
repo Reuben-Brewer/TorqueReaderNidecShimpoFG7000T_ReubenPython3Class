@@ -6,7 +6,7 @@ reuben.brewer@gmail.com
 www.reubotics.com
 
 Apache 2 License
-Software Revision E, 01/05/2026
+Software Revision F, 01/09/2026
 
 Verified working on: Python 3.11/12/13 for Windows 10/11 64-bit and Raspberry Pi Bookworm (may work on Mac in non-GUI mode, but haven't tested yet).
 '''
@@ -71,9 +71,9 @@ def getPreciseSecondsTimeStampString():
 #######################################################################################################################
 #######################################################################################################################
 #######################################################################################################################
-def ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(input, number_of_leading_numbers = 4, number_of_decimal_places = 3):
+def ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(input, NumberOfLeadingNumbers = 4, NumberOfDecimalPlaces = 3):
 
-    number_of_decimal_places = max(1, number_of_decimal_places) #Make sure we're above 1
+    NumberOfDecimalPlaces = max(1, NumberOfDecimalPlaces) #Make sure we're above 1
 
     ListOfStringsToJoin = []
 
@@ -91,16 +91,16 @@ def ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListI
     ##########################################################################################################
     elif isinstance(input, int) == 1 or isinstance(input, float) == 1:
         element = float(input)
-        prefix_string = "{:." + str(number_of_decimal_places) + "f}"
+        prefix_string = "{:." + str(NumberOfDecimalPlaces) + "f}"
         element_as_string = prefix_string.format(element)
 
         ##########################################################################################################
         ##########################################################################################################
         if element >= 0:
-            element_as_string = element_as_string.zfill(number_of_leading_numbers + number_of_decimal_places + 1 + 1)  # +1 for sign, +1 for decimal place
+            element_as_string = element_as_string.zfill(NumberOfLeadingNumbers + NumberOfDecimalPlaces + 1 + 1)  # +1 for sign, +1 for decimal place
             element_as_string = "+" + element_as_string  # So that our strings always have either + or - signs to maintain the same string length
         else:
-            element_as_string = element_as_string.zfill(number_of_leading_numbers + number_of_decimal_places + 1 + 1 + 1)  # +1 for sign, +1 for decimal place
+            element_as_string = element_as_string.zfill(NumberOfLeadingNumbers + NumberOfDecimalPlaces + 1 + 1 + 1)  # +1 for sign, +1 for decimal place
         ##########################################################################################################
         ##########################################################################################################
 
@@ -116,7 +116,7 @@ def ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListI
 
         if len(input) > 0:
             for element in input: #RECURSION
-                ListOfStringsToJoin.append(ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(element, number_of_leading_numbers, number_of_decimal_places))
+                ListOfStringsToJoin.append(ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(element, NumberOfLeadingNumbers, NumberOfDecimalPlaces))
 
         else: #Situation when we get a list() or []
             ListOfStringsToJoin.append(str(input))
@@ -132,7 +132,7 @@ def ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListI
 
         if len(input) > 0:
             for element in input: #RECURSION
-                ListOfStringsToJoin.append("TUPLE" + ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(element, number_of_leading_numbers, number_of_decimal_places))
+                ListOfStringsToJoin.append("TUPLE" + ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(element, NumberOfLeadingNumbers, NumberOfDecimalPlaces))
 
         else: #Situation when we get a list() or []
             ListOfStringsToJoin.append(str(input))
@@ -148,7 +148,7 @@ def ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListI
 
         if len(input) > 0:
             for Key in input: #RECURSION
-                ListOfStringsToJoin.append(str(Key) + ": " + ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(input[Key], number_of_leading_numbers, number_of_decimal_places))
+                ListOfStringsToJoin.append(str(Key) + ": " + ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(input[Key], NumberOfLeadingNumbers, NumberOfDecimalPlaces))
 
         else: #Situation when we get a dict()
             ListOfStringsToJoin.append(str(input))
@@ -231,7 +231,7 @@ def ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListI
 
 #######################################################################################################################
 #######################################################################################################################
-def ConvertDictToProperlyFormattedStringForPrinting(DictToPrint, NumberOfDecimalsPlaceToUse = 3, NumberOfEntriesPerLine = 1, NumberOfTabsBetweenItems = 3):
+def ConvertDictToProperlyFormattedStringForPrinting(DictToPrint, NumberOfDecimalsPlaceToUse = 3, NumberOfEntriesPerLine = 1, NumberOfTabsBetweenItems = 3, NumberOfLeadingNumbers = 3):
 
     try:
         ProperlyFormattedStringForPrinting = ""
@@ -242,12 +242,12 @@ def ConvertDictToProperlyFormattedStringForPrinting(DictToPrint, NumberOfDecimal
             if isinstance(DictToPrint[Key], dict): #RECURSION
                 ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
                                                      str(Key) + ":\n" + \
-                                                     ConvertDictToProperlyFormattedStringForPrinting(DictToPrint[Key], NumberOfDecimalsPlaceToUse, NumberOfEntriesPerLine, NumberOfTabsBetweenItems)
+                                                     ConvertDictToProperlyFormattedStringForPrinting(DictToPrint[Key], NumberOfDecimalsPlaceToUse, NumberOfEntriesPerLine, NumberOfTabsBetweenItems, NumberOfLeadingNumbers)
 
             else:
                 ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + \
                                                      str(Key) + ": " + \
-                                                     ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(DictToPrint[Key], 0, NumberOfDecimalsPlaceToUse)
+                                                     ConvertFloatToStringWithNumberOfLeadingNumbersAndDecimalPlaces_NumberOrListInput(DictToPrint[Key], NumberOfLeadingNumbers, NumberOfDecimalsPlaceToUse)
 
             if ItemsPerLineCounter < NumberOfEntriesPerLine - 1:
                 ProperlyFormattedStringForPrinting = ProperlyFormattedStringForPrinting + "\t"*NumberOfTabsBetweenItems
@@ -274,12 +274,11 @@ def GUI_update_clock():
     global GUI_RootAfterCalNmackInterval_Milliseconds
     global USE_GUI_FLAG
 
-    global TorqueReaderNidecShimpoFG7000T_NumberOfSensors
-    global TorqueReaderNidecShimpoFG7000T_ListOfObjects
+    global TorqueReaderNidecShimpoFG7000T_Object
     global TorqueReaderNidecShimpoFG7000T_OPEN_FLAG
     global SHOW_IN_GUI_TorqueReaderNidecShimpoFG7000T_FLAG
-    global TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts
-    global TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfLabels
+    global TorqueReaderNidecShimpoFG7000T_MostRecentDict
+    global TorqueReaderNidecShimpoFG7000T_MostRecentDict_Label
 
     global CSVdataLogger_Object
     global CSVdataLogger_OPEN_FLAG
@@ -297,14 +296,12 @@ def GUI_update_clock():
 
             #########################################################
             if TorqueReaderNidecShimpoFG7000T_OPEN_FLAG == 1 and SHOW_IN_GUI_TorqueReaderNidecShimpoFG7000T_FLAG == 1:
-                for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-                    TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfLabels[Index]["text"]  = ConvertDictToProperlyFormattedStringForPrinting(TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index], NumberOfDecimalsPlaceToUse=3, NumberOfEntriesPerLine=3, NumberOfTabsBetweenItems=1)
+                TorqueReaderNidecShimpoFG7000T_MostRecentDict_Label["text"]  = ConvertDictToProperlyFormattedStringForPrinting(TorqueReaderNidecShimpoFG7000T_MostRecentDict, NumberOfDecimalsPlaceToUse=3, NumberOfEntriesPerLine=3, NumberOfTabsBetweenItems=1, NumberOfLeadingNumbers=3)
             #########################################################
 
             #########################################################
             if TorqueReaderNidecShimpoFG7000T_OPEN_FLAG == 1 and SHOW_IN_GUI_TorqueReaderNidecShimpoFG7000T_FLAG == 1:
-                for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-                    TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].GUI_update_clock()
+                TorqueReaderNidecShimpoFG7000T_Object.GUI_update_clock()
             #########################################################
 
             #########################################################
@@ -350,8 +347,7 @@ def GUI_Thread():
     global GUI_RootAfterCalNmackInterval_Milliseconds
     global USE_TABS_IN_GUI_FLAG
 
-    global TorqueReaderNidecShimpoFG7000T_NumberOfSensors
-    global TorqueReaderNidecShimpoFG7000T_ListOfObjects
+    global TorqueReaderNidecShimpoFG7000T_Object
     global TorqueReaderNidecShimpoFG7000T_OPEN_FLAG
 
     global CSVdataLogger_Object
@@ -409,18 +405,16 @@ def GUI_Thread():
 
     #################################################
     #################################################
-    global TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfLabels
-    TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfLabels = []
-    for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-        TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfLabels.append(Label(Tab_MainControls, text="TorqueReaderNidecShimpoFG7000T_MostRecentDict_Label", width=120, font=("Helvetica", 10)))
-        TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfLabels[Index].grid(row=Index, column=0, padx=1, pady=1, columnspan=1, rowspan=1)
+    global TorqueReaderNidecShimpoFG7000T_MostRecentDict_Label
+    TorqueReaderNidecShimpoFG7000T_MostRecentDict_Label = Label(Tab_MainControls, text="TorqueReaderNidecShimpoFG7000T_MostRecentDict_Label", width=120, font=("Helvetica", 10))
+    TorqueReaderNidecShimpoFG7000T_MostRecentDict_Label.grid(row=0, column=0, padx=1, pady=1, columnspan=1, rowspan=1)
     #################################################
     #################################################
 
     #################################################
     #################################################
     ButtonsFrame = Frame(Tab_MainControls)
-    ButtonsFrame.grid(row = Index + 1, column = 0, padx = 10, pady = 10, rowspan = 1, columnspan = 1)
+    ButtonsFrame.grid(row = 1, column = 0, padx = 10, pady = 10, rowspan = 1, columnspan = 1)
     #################################################
     #################################################
 
@@ -441,8 +435,7 @@ def GUI_Thread():
     #################################################
     #################################################
     if TorqueReaderNidecShimpoFG7000T_OPEN_FLAG == 1:
-        for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-            TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].CreateGUIobjects(TkinterParent=Tab_TorqueReaderNidecShimpoFG7000T)
+        TorqueReaderNidecShimpoFG7000T_Object.CreateGUIobjects(TkinterParent=Tab_TorqueReaderNidecShimpoFG7000T)
     #################################################
     #################################################
 
@@ -656,39 +649,28 @@ if __name__ == '__main__':
 
     global ResetTare_EventNeedsToBeFiredFlag
     ResetTare_EventNeedsToBeFiredFlag = 0
-
-    global SumOfTorquesFromAllSensors_Nm
-    SumOfTorquesFromAllSensors_Nm = 0
-
-    global SumOfTorqueDerivativesFromAllSensors_Nm
-    SumOfTorqueDerivativesFromAllSensors_Nm = 0
     #################################################
     #################################################
 
     #################################################
     #################################################
-    global TorqueReaderNidecShimpoFG7000T_ListOfObjects
-    TorqueReaderNidecShimpoFG7000T_ListOfObjects = list()
+    global TorqueReaderNidecShimpoFG7000T_Object
+    TorqueReaderNidecShimpoFG7000T_Object = list()
 
     global TorqueReaderNidecShimpoFG7000T_OPEN_FLAG
     TorqueReaderNidecShimpoFG7000T_OPEN_FLAG = 0
 
-    global TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList
-    TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList = ["FT79OUSHA"]
+    global TorqueReaderNidecShimpoFG7000T_DeviceToReadSerialNumber
+    TorqueReaderNidecShimpoFG7000T_DeviceToReadSerialNumber = "FT79OUSHA"
 
-    global TorqueReaderNidecShimpoFG7000T_NumberOfSensors
-    TorqueReaderNidecShimpoFG7000T_NumberOfSensors = len(TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList)
+    global TorqueReaderNidecShimpoFG7000T_MostRecentDict
+    TorqueReaderNidecShimpoFG7000T_MostRecentDict = dict()
 
-    global TorqueReaderNidecShimpoFG7000T_OPEN_FLAG_ListOfFlags
-    TorqueReaderNidecShimpoFG7000T_OPEN_FLAG_ListOfFlags = [0]*TorqueReaderNidecShimpoFG7000T_NumberOfSensors
+    global TorqueReaderNidecShimpoFG7000T_MostRecentDict_MeasurementTorque_DictOfConvertedValues_Value
+    TorqueReaderNidecShimpoFG7000T_MostRecentDict_MeasurementTorque_DictOfConvertedValues_Value = 0.0
 
-    #################################################
-    global TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts
-    TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts = list()
-
-    for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-        TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts.append(dict())
-    #################################################
+    global globalTorqueReaderNidecShimpoFG7000T_MostRecentDict_MeasurementTorqueDerivative_DictOfConvertedValues_Value
+    TorqueReaderNidecShimpoFG7000T_MostRecentDict_MeasurementTorqueDerivative_DictOfConvertedValues_Value = 0.0
 
     global TorqueReadingUnits_AcceptableValuesList
     TorqueReadingUnits_AcceptableValuesList = ["N.m", "N.cm", "kgf.cm", "lbf.ft", "lbf.in"]
@@ -753,47 +735,35 @@ if __name__ == '__main__':
 
     #################################################
     #################################################
-    for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
+    global TorqueReaderNidecShimpoFG7000T_GUIparametersDict
+    TorqueReaderNidecShimpoFG7000T_GUIparametersDict = dict([("USE_GUI_FLAG", USE_GUI_FLAG and SHOW_IN_GUI_TorqueReaderNidecShimpoFG7000T_FLAG),
+                                                            ("EnableInternal_MyPrint_Flag", 0),
+                                                            ("NumberOfPrintLines", 10),
+                                                            ("UseBorderAroundThisGuiObjectFlag", 0),
+                                                            ("GUI_ROW", GUI_ROW_TorqueReaderNidecShimpoFG7000T),
+                                                            ("GUI_COLUMN", GUI_COLUMN_TorqueReaderNidecShimpoFG7000T),
+                                                            ("GUI_PADX", GUI_PADX_TorqueReaderNidecShimpoFG7000T),
+                                                            ("GUI_PADY", GUI_PADY_TorqueReaderNidecShimpoFG7000T),
+                                                            ("GUI_ROWSPAN", GUI_ROWSPAN_TorqueReaderNidecShimpoFG7000T),
+                                                            ("GUI_COLUMNSPAN", GUI_COLUMNSPAN_TorqueReaderNidecShimpoFG7000T)])
 
-        global TorqueReaderNidecShimpoFG7000T_GUIparametersDict
-        TorqueReaderNidecShimpoFG7000T_GUIparametersDict = dict([("USE_GUI_FLAG", USE_GUI_FLAG and SHOW_IN_GUI_TorqueReaderNidecShimpoFG7000T_FLAG),
-                                                                ("EnableInternal_MyPrint_Flag", 0),
-                                                                ("NumberOfPrintLines", 10),
-                                                                ("UseBorderAroundThisGuiObjectFlag", 0),
-                                                                ("GUI_ROW", GUI_ROW_TorqueReaderNidecShimpoFG7000T + Index),
-                                                                ("GUI_COLUMN", GUI_COLUMN_TorqueReaderNidecShimpoFG7000T),
-                                                                ("GUI_PADX", GUI_PADX_TorqueReaderNidecShimpoFG7000T),
-                                                                ("GUI_PADY", GUI_PADY_TorqueReaderNidecShimpoFG7000T),
-                                                                ("GUI_ROWSPAN", GUI_ROWSPAN_TorqueReaderNidecShimpoFG7000T),
-                                                                ("GUI_COLUMNSPAN", GUI_COLUMNSPAN_TorqueReaderNidecShimpoFG7000T)])
+    global TorqueReaderNidecShimpoFG7000T_SetupDict
+    TorqueReaderNidecShimpoFG7000T_SetupDict = dict([("GUIparametersDict", TorqueReaderNidecShimpoFG7000T_GUIparametersDict),
+                                                    ("DesiredSerialNumber_USBtoSerialConverter", TorqueReaderNidecShimpoFG7000T_DeviceToReadSerialNumber),
+                                                    ("NameToDisplay_UserSet", "TorqueReaderNidecShimpoFG7000T: Sensor " + TorqueReaderNidecShimpoFG7000T_DeviceToReadSerialNumber),
+                                                    ("DedicatedTxThread_TimeToSleepEachLoop", 0.005),
+                                                    ("DedicatedRxThread_TimeToSleepEachLoop", 0.005),
+                                                    ("TorqueDerivative_ExponentialSmoothingFilterLambda", 0.95)])
 
-        global TorqueReaderNidecShimpoFG7000T_SetupDict
-        TorqueReaderNidecShimpoFG7000T_SetupDict = dict([("GUIparametersDict", TorqueReaderNidecShimpoFG7000T_GUIparametersDict),
-                                                        ("DesiredSerialNumber_USBtoSerialConverter", TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index]),
-                                                        ("NameToDisplay_UserSet", "TorqueReaderNidecShimpoFG7000T: Sensor " + TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index]),
-                                                        ("DedicatedTxThread_TimeToSleepEachLoop", 0.008),
-                                                        ("DedicatedRxThread_TimeToSleepEachLoop", 0.008),
-                                                        ("TorqueDerivative_ExponentialSmoothingFilterLambda", 0.95)])
+    if USE_TorqueReaderNidecShimpoFG7000T_FLAG == 1 and EXIT_PROGRAM_FLAG == 0:
+        try:
+            TorqueReaderNidecShimpoFG7000T_Object = TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(TorqueReaderNidecShimpoFG7000T_SetupDict)
+            TorqueReaderNidecShimpoFG7000T_OPEN_FLAG = TorqueReaderNidecShimpoFG7000T_Object.OBJECT_CREATED_SUCCESSFULLY_FLAG
 
-        if USE_TorqueReaderNidecShimpoFG7000T_FLAG == 1 and EXIT_PROGRAM_FLAG == 0:
-            try:
-                TorqueReaderNidecShimpoFG7000T_ListOfObjects.append(TorqueReaderNidecShimpoFG7000T_ReubenPython3Class(TorqueReaderNidecShimpoFG7000T_SetupDict))
-                TorqueReaderNidecShimpoFG7000T_OPEN_FLAG_ListOfFlags[Index] = TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].OBJECT_CREATED_SUCCESSFULLY_FLAG
-
-            except:
-                exceptions = sys.exc_info()[0]
-                print("TorqueReaderNidecShimpoFG7000T_ReubenPython3ClassObject __init__ on SerialNumber" + TorqueReaderNidecShimpoFG7000T_DevicesToReadSerialNumbersList[Index] + ", exceptions: %s" % exceptions)
-                traceback.print_exc()
-    #################################################
-    #################################################
-
-    #################################################
-    #################################################
-    TorqueReaderNidecShimpoFG7000T_OPEN_FLAG = 1
-    for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-        for IndividualFlag in TorqueReaderNidecShimpoFG7000T_OPEN_FLAG_ListOfFlags:
-            if IndividualFlag != 1:
-                TorqueReaderNidecShimpoFG7000T_OPEN_FLAG = 0
+        except:
+            exceptions = sys.exc_info()[0]
+            print("TorqueReaderNidecShimpoFG7000T_ReubenPython3ClassObject __init__ on SerialNumber" + TorqueReaderNidecShimpoFG7000T_DeviceToReadSerialNumber + ", exceptions: %s" % exceptions)
+            traceback.print_exc()
     #################################################
     #################################################
 
@@ -831,24 +801,9 @@ if __name__ == '__main__':
 
     #################################################
     CSVdataLogger_SetupDict_VariableNamesForHeaderList = ["Time (S)",
-                                                         "SumOfTorquesFromAllSensors (Nm)"]
-    #################################################
-
-    #################################################
-    for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-        CSVdataLogger_SetupDict_VariableNamesForHeaderList.append("Torque " + str(Index) + " (Nm)")
-    #################################################
-
-    #################################################
-    CSVdataLogger_SetupDict_VariableNamesForHeaderList.append("SumOfTorqueDerivativesFromAllSensors (Nm/s)")
-    #################################################
-
-    #################################################
-    for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-        CSVdataLogger_SetupDict_VariableNamesForHeaderList.append("TorqueDerivative " + str(Index) + " (Nm/s)")
-    #################################################
-
-    #################################################
+                                                         "Torque (Nm)",
+                                                         "TorqueDerivative (Nm/s)"]
+    
     print("CSVdataLogger_SetupDict_VariableNamesForHeaderList: " + str(CSVdataLogger_SetupDict_VariableNamesForHeaderList))
     #################################################
 
@@ -939,10 +894,10 @@ if __name__ == '__main__':
     #################################################
     #################################################
     global MyPlotterPureTkinterStandAloneProcess_NameList
-    MyPlotterPureTkinterStandAloneProcess_NameList = ["SumOfTorquesFromAllSensors_Nm", "SumOfTorqueDerivativesFromAllSensors_Nm", "Channel2", "Channel3", "Channel4", "Channel5"]
+    MyPlotterPureTkinterStandAloneProcess_NameList = ["Torque", "TorqueDerivative"]
 
     global MyPlotterPureTkinterStandAloneProcess_ColorList
-    MyPlotterPureTkinterStandAloneProcess_ColorList = ["Red", "Green", "Blue", "Black", "Purple", "Orange"]
+    MyPlotterPureTkinterStandAloneProcess_ColorList = ["Red", "Green"]
 
     global MyPlotterPureTkinterStandAloneProcess_GUIparametersDict
     MyPlotterPureTkinterStandAloneProcess_GUIparametersDict = dict([("EnableInternal_MyPrint_Flag", 1),
@@ -959,10 +914,10 @@ if __name__ == '__main__':
                                                             ("ParentPID", os.getpid()),
                                                             ("WatchdogTimerDurationSeconds_ExpirationWillEndStandAlonePlottingProcess", 5.0),
                                                             ("CurvesToPlotNamesAndColorsDictOfLists", dict([("NameList", MyPlotterPureTkinterStandAloneProcess_NameList),
-                                                                                                        ("MarkerSizeList", [2]*6),
-                                                                                                        ("LineWidthList", [2]*6),
-                                                                                                        ("IncludeInXaxisAutoscaleCalculationList", [1]*6),
-                                                                                                        ("IncludeInYaxisAutoscaleCalculationList", [1]*6),
+                                                                                                        ("MarkerSizeList", [2]*2),
+                                                                                                        ("LineWidthList", [2]*2),
+                                                                                                        ("IncludeInXaxisAutoscaleCalculationList", [1, 0]),
+                                                                                                        ("IncludeInYaxisAutoscaleCalculationList", [1, 0]),
                                                                                                         ("ColorList", MyPlotterPureTkinterStandAloneProcess_ColorList)])),
                                                             ("SmallTextSize", 7),
                                                             ("LargeTextSize", 12),
@@ -1060,21 +1015,32 @@ if __name__ == '__main__':
             ################################################### GET's
             ###################################################
             ###################################################
+            if CSVdataLogger_OPEN_FLAG == 1:
+
+                CSVdataLogger_MostRecentDict = CSVdataLogger_Object.GetMostRecentDataDict()
+
+                if "Time" in CSVdataLogger_MostRecentDict:
+                    CSVdataLogger_MostRecentDict_Time = CSVdataLogger_MostRecentDict["Time"]
+                    CSVdataLogger_MostRecentDict_IsSavingFlag = CSVdataLogger_MostRecentDict["IsSavingFlag"]
+
+            ###################################################
+            ###################################################
+            ###################################################
+
+            ################################################### GET's
+            ###################################################
+            ###################################################
             if TorqueReaderNidecShimpoFG7000T_OPEN_FLAG == 1:
 
-                SumOfTorquesFromAllSensors_Nm = 0
-                SumOfTorqueDerivativesFromAllSensors_NmPerSec = 0
 
-                for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-                    TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index] = TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].GetMostRecentDataDict()
-                    #print("TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[ " + str(Index) + "]: " + str(TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]))
+                    TorqueReaderNidecShimpoFG7000T_MostRecentDict = TorqueReaderNidecShimpoFG7000T_Object.GetMostRecentDataDict()
+                    #print("TorqueReaderNidecShimpoFG7000T_MostRecentDict[ " + str(Index) + "]: " + str(TorqueReaderNidecShimpoFG7000T_MostRecentDict))
 
                     try:
-                        if "MeasurementTorque_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index] and "MeasurementTorqueDerivative_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]:
-                            SumOfTorquesFromAllSensors_Nm = SumOfTorquesFromAllSensors_Nm + TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorque_DictOfConvertedValues"]["N.m"]
-                            SumOfTorqueDerivativesFromAllSensors_NmPerSec = SumOfTorqueDerivativesFromAllSensors_NmPerSec + TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorqueDerivative_DictOfConvertedValues"]["N.m.PerSec"]
+                        if "MeasurementTorque_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict and "MeasurementTorqueDerivative_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict:
+                            TorqueReaderNidecShimpoFG7000T_MostRecentDict_MeasurementTorque_DictOfConvertedValues_Value = TorqueReaderNidecShimpoFG7000T_MostRecentDict["MeasurementTorque_DictOfConvertedValues"]["N.m"]
+                            TorqueReaderNidecShimpoFG7000T_MostRecentDict_MeasurementTorqueDerivative_DictOfConvertedValues_Value = TorqueReaderNidecShimpoFG7000T_MostRecentDict["MeasurementTorqueDerivative_DictOfConvertedValues"]["N.m.PerSec"]
 
-                            #print("SumOfTorquesFromAllSensors_Nm: " + str(SumOfTorquesFromAllSensors_Nm) + ", SumOfTorqueDerivativesFromAllSensors_NmPerSec: " + str(SumOfTorqueDerivativesFromAllSensors_NmPerSec))
                     except:
                         pass
             ###################################################
@@ -1090,7 +1056,7 @@ if __name__ == '__main__':
                 if ResetPeak_EventNeedsToBeFiredFlag == 1:
 
                     for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-                        TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].ResetPeak()
+                        TorqueReaderNidecShimpoFG7000T_Object.ResetPeak()
 
                     ResetPeak_EventNeedsToBeFiredFlag = 0
                 ##########################################################################################################
@@ -1099,7 +1065,7 @@ if __name__ == '__main__':
                 if ResetTare_EventNeedsToBeFiredFlag == 1:
 
                     for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-                        TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].ResetTare()
+                        TorqueReaderNidecShimpoFG7000T_Object.ResetTare()
 
                     ResetTare_EventNeedsToBeFiredFlag = 0
                 ##########################################################################################################
@@ -1108,7 +1074,7 @@ if __name__ == '__main__':
                 if LoopCounter == 1000:
                     LoopCounter = 0
 
-                    #TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].SetUnits(TorqueReadingUnits_AcceptableValuesList[TorqueReadingUnits_AcceptableValuesList_ListCounter], PrintDebugFlag=1)
+                    #TorqueReaderNidecShimpoFG7000T_Object.SetUnits(TorqueReadingUnits_AcceptableValuesList[TorqueReadingUnits_AcceptableValuesList_ListCounter], PrintDebugFlag=1)
 
                     TorqueReadingUnits_AcceptableValuesList_ListCounter = TorqueReadingUnits_AcceptableValuesList_ListCounter + 1
                     if TorqueReadingUnits_AcceptableValuesList_ListCounter == len(TorqueReadingUnits_AcceptableValuesList):
@@ -1131,28 +1097,8 @@ if __name__ == '__main__':
                 ####################################################
                 ListToWrite = []
                 ListToWrite.append(CurrentTime_MainLoopThread)
-                ListToWrite.append(SumOfTorquesFromAllSensors_Nm)
-
-                ####################################################
-                for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-                    try:
-                        if "MeasurementTorque_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]:
-                            ListToWrite.append(TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorque_DictOfConvertedValues"]["N.m"])
-                    except:
-                        pass
-                ####################################################
-
-                ListToWrite.append(SumOfTorqueDerivativesFromAllSensors_NmPerSec)
-
-                ####################################################
-                for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-                    try:
-                        if "MeasurementTorque_DictOfConvertedValues" in TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]:
-                            ListToWrite.append(TorqueReaderNidecShimpoFG7000T_MostRecentDict_ListOfDicts[Index]["MeasurementTorqueDerivative_DictOfConvertedValues"]["N.m.PerSec"])
-                    except:
-                        pass
-                ####################################################
-
+                ListToWrite.append(TorqueReaderNidecShimpoFG7000T_MostRecentDict_MeasurementTorque_DictOfConvertedValues_Value)
+                ListToWrite.append(TorqueReaderNidecShimpoFG7000T_MostRecentDict_MeasurementTorqueDerivative_DictOfConvertedValues_Value)
                 ####################################################
                 ####################################################
 
@@ -1177,7 +1123,7 @@ if __name__ == '__main__':
 
                             MyPlotterPureTkinterStandAloneProcess_Object.ExternalAddPointOrListOfPointsToPlot(MyPlotterPureTkinterStandAloneProcess_NameList[0:2],
                                                                                                             [CurrentTime_MainLoopThread]*2,
-                                                                                                            [SumOfTorquesFromAllSensors_Nm, SumOfTorqueDerivativesFromAllSensors_NmPerSec])
+                                                                                                            [TorqueReaderNidecShimpoFG7000T_MostRecentDict_MeasurementTorque_DictOfConvertedValues_Value, TorqueReaderNidecShimpoFG7000T_MostRecentDict_MeasurementTorqueDerivative_DictOfConvertedValues_Value])
 
 
                             LastTime_MainLoopThread_MyPlotterPureTkinterStandAloneProcess = CurrentTime_MainLoopThread
@@ -1205,8 +1151,7 @@ if __name__ == '__main__':
 
     #################################################
     if TorqueReaderNidecShimpoFG7000T_OPEN_FLAG == 1:
-        for Index in range(0, TorqueReaderNidecShimpoFG7000T_NumberOfSensors):
-            TorqueReaderNidecShimpoFG7000T_ListOfObjects[Index].ExitProgram_Callback()
+        TorqueReaderNidecShimpoFG7000T_Object.ExitProgram_Callback()
     #################################################
 
     #################################################
